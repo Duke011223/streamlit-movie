@@ -230,16 +230,12 @@ def main():
             current_user = next((u for u in users if u['username'] == st.session_state.user), None)
             if current_user:
                 st.write(f"**사용자명**: {current_user['username']}")
-                st.write(f"**역할**: {current_user['role']}")
-                if current_user['role'] == 'admin':
-                    st.write("**관리자 권한**")
-            if st.button("내 계정 삭제"):
-                if st.session_state.user:
-                    users = [u for u in users if u['username'] != st.session_state.user]
-                    save_users(users)
-                    st.session_state.user = None
-                    st.session_state.role = None
-                    st.success("계정 삭제가 완료되었습니다.")
+                if st.button("비밀번호 변경"):
+                    new_password = st.text_input("새 비밀번호", type="password")
+                    if new_password:
+                        current_user['password'] = hash_password(new_password)
+                        save_users(users)
+                        st.success("비밀번호가 변경되었습니다.")
         else:
             st.warning("로그인 후 계정 관리가 가능합니다.")
 
@@ -252,6 +248,7 @@ def main():
             review = next((r for r in ratings if r['movie'] == review_to_modify), None)
             if review:
                 st.write(f"**영화**: {review['movie']}")
+                st.write(f"**작성자**: {review['username']}")  # 작성자 추가
                 st.write(f"**리뷰**: {review['review'] if review['review'] else '없음'}")
                 new_review = st.text_area("새 리뷰를 작성하세요", value=review['review'] if review['review'] else "")
                 if st.button(f"수정 저장"):
