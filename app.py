@@ -244,22 +244,26 @@ def main():
                     st.write(f"**평점**: {r['rating']}")
                     st.write(f"**리뷰**: {r['review'] if r['review'] else '없음'}")
                     st.markdown("---")
-                
+
                     # 리뷰 수정 기능
-                    if st.button(f"수정하기 ({r['username']} - {r['movie']})", key=f"edit-review-{r['username']}-{r['movie']}"):
+                    edit_review = st.expander(f"수정하기 ({r['username']} - {r['movie']})", expanded=False)
+                    with edit_review:
                         new_rating = st.number_input(f"새 평점 ({r['username']} - {r['movie']})", min_value=0.0, max_value=10.0, step=0.1, value=r['rating'], format="%.2f")
                         new_review = st.text_area(f"새 리뷰 ({r['username']} - {r['movie']})", value=r['review'] if r['review'] else "", height=150)
 
-                        if st.button(f"수정 저장 ({r['username']} - {r['movie']})"):
+                        if st.button(f"수정 저장 ({r['username']} - {r['movie']})", key=f"save-edit-review-{r['username']}-{r['movie']}"):
                             # 수정된 평점 및 리뷰 업데이트
                             r['rating'] = new_rating
-                            r['review'] = new_review
+                            r['review'] = new_review if new_review else None
+
+                            # 수정된 리뷰 저장
                             save_ratings(admin_ratings)
                             st.success(f"리뷰가 성공적으로 수정되었습니다. ({r['movie']})")
             else:
                 st.write("현재 리뷰가 없습니다.")
         else:
             st.warning("관리자만 볼 수 있는 페이지입니다.")
+
 
 
 if __name__ == "__main__":
