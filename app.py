@@ -194,17 +194,23 @@ def main():
                     st.subheader(top_movie['title'])
                     poster_path = os.path.join(poster_folder, top_movie.get('poster_file', ''))
                     if os.path.exists(poster_path) and pd.notna(top_movie.get('poster_file')):
-                        st.image(poster_path, width=200)
-                    st.write(f"**장르**: {top_movie['genre']}")
-                    st.write(f"**평점**: {top_movie['rating']}")
+                        st.image(poster_path, width=200)  # 이미지 표시
+                    else:
+                        st.write("포스터 이미지가 없습니다.")  # 이미지가 없을 경우 메시지 출력
 
-                    # 평점이 가장 높은 영화의 상세 정보 표시
+                    st.write(f"**영화 평점**: {top_movie['rating']}")
+                    st.write(f"**장르**: {top_movie['genre']}")
                     st.write(f"**감독**: {top_movie['director']}")
                     st.write(f"**배우**: {top_movie['actor']}")
                     st.write(f"**개봉일**: {top_movie['release_date']}")
-                    st.write(f"**상영 시간**: {top_movie.get('running_time', '정보 없음')} 분")
+                    st.write(f"**상영 시간**: {top_movie.get('running_time', '정보 없음')}분")
+                    st.markdown("---")
                 else:
-                    st.warning("추천할 영화가 없습니다.")
+                    st.write("추천할 영화가 없습니다.")
+            else:
+                st.write("평가한 영화가 없으므로 추천할 영화가 없습니다.")
+        else:
+            st.write("로그인 후 추천 영화를 확인할 수 있습니다.")
 
     # 나의 활동
     with tab3:
