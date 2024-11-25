@@ -179,26 +179,32 @@ def main():
     with tab2:
         st.header("⭐ 추천 영화")
         if st.session_state.user:
+            # 사용자가 평점을 남긴 영화들만 가져오기
             user_ratings = [r for r in ratings if r['username'] == st.session_state.user]
             if user_ratings:
+                # 사용자가 평가한 영화들의 장르 추출
                 favorite_genres = [df[df['title'] == r['movie']].iloc[0]['genre'] for r in user_ratings if not df[df['title'] == r['movie']].empty]
+                # 장르를 기반으로 추천 영화 필터링
                 recommended_movies = df[df['genre'].isin(favorite_genres) & ~df['title'].isin([r['movie'] for r in user_ratings])]
 
                 # 추천 영화 중 가장 높은 평점의 영화 하나만 표시
-                top_movie = recommended_movies.loc[recommended_movies['rating'].idxmax()]
+                if not recommended_movies.empty:
+                    top_movie = recommended_movies.loc[recommended_movies['rating'].idxmax()]
 
-                st.subheader(top_movie['title'])
-                poster_path = os.path.join(poster_folder, top_movie.get('poster_file', ''))
-                if os.path.exists(poster_path) and pd.notna(top_movie.get('poster_file')):
-                    st.image(poster_path, width=200)
-                st.write(f"**장르**: {top_movie['genre']}")
-                st.write(f"**개봉일**: {top_movie['release_date']}")
-                st.write(f"**평점**: {top_movie['rating']}")
-                st.markdown("---")
-            else:
-                st.warning("평점을 남기고 나면 추천 영화를 볼 수 있습니다.")
-        else:
-            st.warning("로그인 후 추천 영화를 확인할 수 있습니다.")
+                    st.subheader(top_movie['title'])
+                    poster_path = os.path.join(poster_folder, top_movie.get('poster_file', ''))
+                    if os.path.exists(poster_path) and pd.notna(top_movie.get('poster_file')):
+                        st.image(poster_path, width=200)
+                    st.write(f"**장르**: {top_movie['genre']}")
+                    st.write(f"**평점**: {top_movie['rating']}")
+
+                    # 평점이 가장 높은 영화의 상세 정보 표시
+                    st.write(f"**감독**: {top_movie['director']}")
+                    st.write(f"**배우**: {top_movie['actor']}")
+                    st.write(f"**개봉일**: {top_movie['release_date']}")
+                    st.write(f"**상영 시간**: {top_movie.get('running_time', '정보 없음')} 분")
+                else:
+                    st.warning("추천할 영화가 없습니다.")
 
     # 나의 활동
     with tab3:
