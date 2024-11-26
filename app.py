@@ -292,15 +292,10 @@ def main():
                 reviews_df = pd.DataFrame(admin_ratings)
                 reviews_df = reviews_df[['username', 'movie', 'rating', 'review']]  # 필요한 열만 선택
 
-                # 별점 그림으로 변환
-                def stars(rating):
-                    return '⭐' * int(round(rating))
-
-                reviews_df['rating_stars'] = reviews_df['rating'].apply(stars)  # 별점 추가
                 reviews_df = reviews_df.rename(columns={
                     'username': '사용자명',
                     'movie': '영화 제목',
-                    'rating_stars': '별점',
+                    'rating': '평점',
                     'review': '리뷰'
                 })
 
@@ -323,8 +318,8 @@ def main():
                             f"새 별점 ({r['영화 제목']})", 
                             min_value=0.0, 
                             max_value=10.0, 
-                            step=0.5, 
-                            value=float(admin_ratings[_]['rating'])
+                            step=0.01, 
+                            value=float(admin_ratings[idx]['rating'])
                         )
                         new_review = st.text_area(
                             f"새 리뷰 ({r['영화 제목']})", 
