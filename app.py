@@ -45,6 +45,7 @@ def main():
 
     if 'user' not in st.session_state:
         st.session_state.user = None
+        st.session_state.role = None
 
     # 포스터 파일 폴더 경로
     poster_folder = "poster_file"
@@ -56,6 +57,7 @@ def main():
             st.write(f"환영합니다, **{st.session_state.user}님!**")
             if st.button("로그아웃"):
                 st.session_state.user = None
+                st.session_state.role = None
                 st.success("로그아웃 성공!")
         else:
             choice = st.radio("로그인/회원가입", ["로그인", "회원가입"])
@@ -66,6 +68,7 @@ def main():
                     user = next((u for u in users if u['username'] == username and u['password'] == hash_password(password)), None)
                     if user:
                         st.session_state.user = username
+                        st.session_state.role = user['role']
                         st.success("로그인 성공!")
                     else:
                         st.error("잘못된 사용자명 또는 비밀번호입니다.")
@@ -76,14 +79,14 @@ def main():
                     if any(u['username'] == new_username for u in users):
                         st.error("이미 존재하는 사용자명입니다.")
                     else:
-                        users.append({'username': new_username, 'password': hash_password(new_password)})
+                        users.append({'username': new_username, 'password': hash_password(new_password), 'role': 'user'})
                         save_users(users)
                         st.success("회원가입 성공! 이제 로그인할 수 있습니다.")
 
-    st.markdown("---")
+        st.markdown("---")
 
     # 메인 영역
-    tab1, tab2, tab3 = st.tabs(["📚 영화 검색", "⭐ 추천 영화", "📈 나의 활동"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 영화 검색", "⭐ 추천 영화", "📈 나의 활동", "🔧 사용자 계정 관리", "👑 관리자 보기"])
 
     # 영화 검색
     with tab1:
@@ -125,30 +128,28 @@ def main():
                 st.write(f"**장르**: {movie['genre']}")
                 st.write(f"**개봉일**: {movie['release_date']}")
 
-                # 상영 시간 표시 (int로 변환)
                 running_time = movie.get('running_time', '정보 없음')
                 if running_time != '정보 없음':
                     try:
-                        running_time = int(running_time)  # int로 변환
+                        running_time = int(running_time)
                         st.write(f"**상영 시간**: {running_time}분")
                     except ValueError:
-                        st.write("**상영 시간**: 정보 없음")  # 변환이 안 될 경우 처리
+                        st.write("**상영 시간**: 정보 없음")
                 else:
                     st.write(f"**상영 시간**: {running_time}분")
 
                 st.write(f"**영화 평점**: {movie['rating']}")
                 st.write(f"**현재 상태**: {movie['running_state']}")
-                st.markdown("---")  # 구분선 추가
+                st.markdown("---")
 
                 # 영화에 대한 평점 표시
                 movie_ratings = [r['rating'] for r in ratings if r['movie'] == movie['title']]
                 if movie_ratings:
                     avg_rating = round(sum(movie_ratings) / len(movie_ratings), 2)
-                    st.write(f"평균 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
+                    st.write(f"사이트 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
                 else:
                     st.write("아직 평점이 없습니다.")
-                
-                # 리뷰 표시
+
                 movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['title'] and r.get('review') is not None]
                 if movie_reviews:
                     st.write("리뷰:")
@@ -173,6 +174,165 @@ def main():
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
+
+    # 추천 영화
+    with tab2:
+        st.header("⭐ 추천 영화")
+
+        if not st.session_state.user:
+            st.warning("로그인 후 추천 영화를 확인할 수 있습니다.")
+        else:
+            # 추천 기준 선택
+            recommendation_type = st.selectbox(
+                "추천 기준을 선택하세요",
+                ["가장 많은 리뷰 수", "가장 높은 평점", "사용자 별 점 평균 순"]
+            )
+
+            # 영화별 리뷰 및 평점 데이터 처리
+            movie_review_counts = {}
+            movie_rating_sums = {}
+            movie_rated_users = {}
+
+            for r in ratings:
+                movie = r['movie']
+                movie_review_counts[movie] = movie_review_counts.get(movie, 0) + (1 if r.get('review') else 0)
+                movie_rating_sums[movie] = movie_rating_sums.get(movie, 0) + r['rating']
+                movie_rated_users[movie] = movie_rated_users.get(movie, 0) + 1
+
+            # 영화 데이터와 리뷰 데이터 병합
+            df['review_count'] = df['title'].map(movie_review_counts).fillna(0).astype(int)
+            df['total_rating'] = df['title'].map(movie_rating_sums).fillna(0.0)
+            df['user_count'] = df['title'].map(movie_rated_users).fillna(0).astype(int)
+
+            if recommendation_type == "가장 많은 리뷰 수":
+                recommended_movies = df.sort_values(by='review_count', ascending=False)
+            elif recommendation_type == "가장 높은 평점":
+                recommended_movies = df.sort_values(by='total_rating', ascending=False)
+            elif recommendation_type == "사용자 별 점 평균 순":
+                recommended_movies = df.sort_values(by='user_count', ascending=False)
+
+            st.write(f"추천된 {recommendation_type} 기준의 영화:")
+            for _, movie in recommended_movies.head(5).iterrows():
+                st.subheader(movie['title'])
+                st.write(f"평점: {movie['rating']}")
+
+    # 사용자 활동 관리
+    with tab3:
+        st.header("📈 나의 활동")
+        st.write("나의 활동 페이지")
+
+    # 계정 관리
+    with tab4:
+        st.header("🔧 사용자 계정 관리")
+        st.write("계정 관리 페이지")
+
+    # 관리자 보기
+    with tab5:
+        st.header("👑 관리자 보기")
+        if st.session_state.role == 'admin':
+            st.write("관리자 전용 정보")
+        else:
+            st.write("관리자만 접근할 수 있는 페이지입니다.")
+
+if __name__ == "__main__":
+    main()
+
+
+    # 나의 활동
+    with tab3:
+        st.header("📈 나의 활동")
+        if st.session_state.user:
+            user_reviews = [r for r in ratings if r['username'] == st.session_state.user]
+            if user_reviews:
+                st.write("내가 남긴 리뷰:")
+                for review in user_reviews:
+                    st.write(f"- **영화**: {review['movie']}, **평점**: {review['rating']}, **리뷰**: {review.get('review', '없음')}")
+            else:
+                st.write("아직 리뷰를 작성하지 않았습니다.")
+        else:
+            st.warning("로그인 후 활동을 확인할 수 있습니다.")
+    # 사용자 계정 관리
+    with tab4:
+        st.header("🔧 사용자 계정 관리")
+        if st.session_state.user:
+            user = next(u for u in users if u['username'] == st.session_state.user)
+            new_password = st.text_input("새 비밀번호", type="password")
+            if st.button("비밀번호 변경"):
+                user['password'] = hash_password(new_password)
+                save_users(users)
+                st.success("비밀번호가 변경되었습니다.")
+        else:
+            st.warning("로그인 후 계정 관리가 가능합니다.")
+
+    # 관리자 보기
+    with tab5:
+        st.header("👑 관리자 보기")
+        if st.session_state.role == 'admin':
+            # 회원 정보
+            st.subheader("📋 회원 정보")
+            user_info = pd.DataFrame(users)
+            st.dataframe(user_info)
+
+            st.markdown("---")
+            st.subheader("📝 사용자 리뷰 관리")
+
+            # 사용자 리뷰 데이터를 테이블 형태로 출력
+            admin_ratings = load_ratings()
+            if admin_ratings:
+                # 사용자 리뷰를 DataFrame으로 변환
+                reviews_df = pd.DataFrame(admin_ratings)
+                reviews_df = reviews_df[['username', 'movie', 'rating', 'review']]  # 필요한 열만 선택
+
+                reviews_df = reviews_df.rename(columns={
+                    'username': '사용자명',
+                    'movie': '영화 제목',
+                    'rating': '평점',
+                    'review': '리뷰'
+                })
+
+                # 데이터 출력
+                st.write("사용자 리뷰를 한눈에 확인하세요:")
+                st.dataframe(reviews_df[['사용자명', '영화 제목', '평점', '리뷰']])
+
+                st.markdown("---")
+                # 개별 리뷰 수정
+                st.subheader("🔧 리뷰 수정 및 삭제")
+                for idx, r in reviews_df.iterrows():
+                    with st.expander(f"{r['사용자명']} - {r['영화 제목']}"):
+                        # 수정할 데이터 표시
+                        st.write(f"**영화 제목**: {r['영화 제목']}")
+                        st.write(f"**현재 평점**: {r['평점']}")
+                        st.write(f"**현재 리뷰**: {r['리뷰'] if r['리뷰'] else '없음'}")
+
+                        # 평점 및 리뷰 수정 입력
+                        new_rating = st.number_input(
+                            f"새 평점 ({r['영화 제목']})", 
+                            min_value=0.0, 
+                            max_value=10.0, 
+                            step=0.1, 
+                            value=float(admin_ratings[idx]['rating'])
+                        )
+                        new_review = st.text_area(
+                            f"새 리뷰 ({r['영화 제목']})", 
+                            value=admin_ratings[idx]['review'] if admin_ratings[idx].get('review') else ""
+                        )
+
+                        # 수정 저장 버튼
+                        if st.button(f"리뷰 수정 저장 ({r['영화 제목']})", key=f"save-edit-{idx}"):
+                            admin_ratings[idx]['rating'] = new_rating
+                            admin_ratings[idx]['review'] = new_review if new_review else None
+                            save_ratings(admin_ratings)
+                            st.success("리뷰가 성공적으로 수정되었습니다.")
+
+                        # 삭제 버튼
+                        if st.button(f"리뷰 삭제 ({r['영화 제목']})", key=f"delete-review-{idx}"):
+                            admin_ratings.pop(idx)  # 리뷰 제거
+                            save_ratings(admin_ratings)
+                            st.warning(f"{r['사용자명']}의 리뷰가 삭제되었습니다.")
+            else:
+                st.write("현재 등록된 리뷰가 없습니다.")
+        else:
+            st.warning("관리자만 볼 수 있는 페이지입니다.")
 
 if __name__ == "__main__":
     main()
