@@ -7,7 +7,8 @@ import os
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_csv("movie_data.csv", encoding='cp949')
+        # cp949를 utf-8로 변경
+        df = pd.read_csv("movie_data.csv", encoding='utf-8')
         df.columns = df.columns.str.strip().str.lower()  # 컬럼명 공백 제거 및 소문자화
         st.write(df.columns)  # 컬럼명 확인
         return df
@@ -16,22 +17,25 @@ def load_data():
         return pd.DataFrame()
 
 def save_users(users):
-    pd.DataFrame(users).to_csv("movie_users.csv", index=False, encoding='cp949')
+    # 인코딩을 utf-8로 변경
+    pd.DataFrame(users).to_csv("movie_users.csv", index=False, encoding='utf-8')
 
 def load_users():
     path = "movie_users.csv"
     if os.path.exists(path):
-        return pd.read_csv(path, encoding='cp949').to_dict('records')
+        return pd.read_csv(path, encoding='utf-8').to_dict('records')
     return []
 
 def save_ratings(ratings):
-    pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding='cp949')
+    # 인코딩을 utf-8로 변경
+    pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding='utf-8')
 
 def load_ratings():
     path = "movie_ratings.csv"
     if os.path.exists(path):
-        return pd.read_csv(path, encoding='cp949').to_dict('records')
+        return pd.read_csv(path, encoding='utf-8').to_dict('records')
     return []
+
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
