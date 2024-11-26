@@ -47,12 +47,8 @@ def main():
         st.session_state.user = None
         st.session_state.role = None
 
-    # 포스터 파일 경로
-    poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
-    if os.path.exists(poster_path) and pd.notna(movie.get('poster_url')):
-        st.image(poster_path, width=200)  # 이미지 표시
-    else:
-        st.write("포스터 이미지가 없습니다.")  # 이미지가 없을 경우 메시지 출력
+    poster_folder = 'posters'  # 포스터가 저장된 폴더 경로
+
 
     # 사이드바 사용자 인증
     with st.sidebar:
@@ -118,8 +114,8 @@ def main():
                 st.subheader(movie['title'])
 
                 # 포스터 파일 경로
-                poster_path = os.path.join(poster_folder, movie.get('poster_file', ''))
-                if os.path.exists(poster_path) and pd.notna(movie.get('poster_file')):
+                poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
+                if os.path.exists(poster_path) and pd.notna(movie.get('poster_url')):
                     st.image(poster_path, width=200)  # 이미지 표시
                 else:
                     st.write("포스터 이미지가 없습니다.")  # 이미지가 없을 경우 메시지 출력
