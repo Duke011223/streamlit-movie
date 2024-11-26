@@ -9,6 +9,7 @@ def load_data():
     try:
         df = pd.read_csv("movie_data.csv", encoding='cp949')
         df.columns = df.columns.str.strip().str.lower()  # 컬럼명 공백 제거 및 소문자화
+        st.write(df.columns)  # 컬럼명 확인
         return df
     except Exception as e:
         st.error(f"데이터 로드 오류: {e}")
