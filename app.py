@@ -216,27 +216,6 @@ def main():
                 st.subheader(movie['title'])
                 st.write(f"평점: {movie['rating']}")
 
-    # 사용자 활동 관리
-    with tab3:
-        st.header("📈 나의 활동")
-        st.write("나의 활동 페이지")
-
-    # 계정 관리
-    with tab4:
-        st.header("🔧 사용자 계정 관리")
-        st.write("계정 관리 페이지")
-
-    # 관리자 보기
-    with tab5:
-        st.header("👑 관리자 보기")
-        if st.session_state.role == 'admin':
-            st.write("관리자 전용 정보")
-        else:
-            st.write("관리자만 접근할 수 있는 페이지입니다.")
-
-if __name__ == "__main__":
-    main()
-
 
     # 나의 활동
     with tab3:
