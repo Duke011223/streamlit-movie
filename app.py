@@ -119,11 +119,14 @@ def main():
 
             for _, movie in filtered_df.iloc[start_idx:end_idx].iterrows():
                 st.subheader(movie['title'])
+
+                # 영화 데이터에서 포스터 파일 경로 추출
                 poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
                 if os.path.exists(poster_path) and pd.notna(movie.get('poster_url')):
-                    st.image(poster_path, width=200)
+                    st.image(poster_path, width=200)  # 이미지 표시
                 else:
-                    st.write("포스터 이미지가 없습니다.")
+                    st.write("포스터 이미지가 없습니다.")  # 이미지가 없을 경우 메시지 출력
+
                 # 영화 정보 출력
                 st.write(f"**영화 ID**: {movie['movie_id']}")
                 st.write(f"**제작사**: {movie['distributor']}")
@@ -131,9 +134,53 @@ def main():
                 st.write(f"**배우**: {movie['actor']}")
                 st.write(f"**장르**: {movie['genre']}")
                 st.write(f"**개봉일**: {movie['release_date']}")
+
+                running_time = movie.get('running_time', '정보 없음')
+                if running_time != '정보 없음':
+                    try:
+                        running_time = int(running_time)
+                        st.write(f"**상영 시간**: {running_time}분")
+                    except ValueError:
+                        st.write("**상영 시간**: 정보 없음")
+                else:
+                    st.write(f"**상영 시간**: {running_time}분")
+
                 st.write(f"**영화 평점**: {movie['rating']}")
                 st.write(f"**현재 상태**: {movie['running_state']}")
                 st.markdown("---")
+
+                # 영화에 대한 평점 표시
+                movie_ratings = [r['rating'] for r in ratings if r['movie'] == movie['title']]
+                if movie_ratings:
+                    avg_rating = round(sum(movie_ratings) / len(movie_ratings), 2)
+                    st.write(f"사이트 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
+                else:
+                    st.write("아직 평점이 없습니다.")
+
+                movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['title'] and r.get('review') is not None]
+                if movie_reviews:
+                    st.write("리뷰:")
+                    for review in movie_reviews:
+                        st.write(f"- {review}")
+                else:
+                    st.write("아직 리뷰가 없습니다.")
+
+                if st.session_state.user:
+                    if any(r['username'] == st.session_state.user and r['movie'] == movie['title'] for r in ratings):
+                        st.info("이미 이 영화에 평점과 리뷰를 남겼습니다.")
+                    else:
+                        rating = st.number_input(f"평점을 선택하세요 ({movie['title']})", min_value=0.0, max_value=10.0, step=0.1, format="%.2f")
+                        review = st.text_area(f"리뷰를 작성하세요 ({movie['title']})", placeholder="영화를 보고 느낀 점을 적어보세요...")
+
+                        if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
+                            ratings.append({
+                                'username': st.session_state.user, 
+                                'movie': movie['title'], 
+                                'rating': round(rating, 2),
+                                'review': review if review else None
+                            })
+                            save_ratings(ratings)
+                            st.success("평점과 리뷰가 저장되었습니다.")
 
     # 추천 영화
     with tab2:
