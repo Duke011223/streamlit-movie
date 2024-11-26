@@ -47,7 +47,7 @@ def main():
         st.session_state.user = None
         st.session_state.role = None
 
-    poster_folder = 'posters'  # 포스터가 저장된 폴더 경로
+    poster_folder = 'poster_url'  # 포스터가 저장된 폴더 경로
 
 
     # 사이드바 사용자 인증
@@ -113,7 +113,7 @@ def main():
             for _, movie in filtered_df.iloc[start_idx:end_idx].iterrows():
                 st.subheader(movie['title'])
 
-                # 포스터 파일 경로
+                # 영화 데이터에서 포스터 파일 경로 추출
                 poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
                 if os.path.exists(poster_path) and pd.notna(movie.get('poster_url')):
                     st.image(poster_path, width=200)  # 이미지 표시
