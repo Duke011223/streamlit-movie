@@ -178,33 +178,74 @@ def main():
     # 추천 영화
     with tab2:
         st.header("⭐ 추천 영화")
-        if st.session_state.user:
-            # 사용자가 평점을 남긴 영화들만 가져오기
-            user_ratings = [r for r in ratings if r['username'] == st.session_state.user]
-            if user_ratings:
-                # 사용자가 평가한 영화들의 장르 추출
-                favorite_genres = [df[df['title'] == r['movie']].iloc[0]['genre'] for r in user_ratings if not df[df['title'] == r['movie']].empty]
-                # 장르를 기반으로 추천 영화 필터링
-                recommended_movies = df[df['genre'].isin(favorite_genres) & ~df['title'].isin([r['movie'] for r in user_ratings])]
 
-                # 추천 영화가 있을 경우에만 처리
-                if not recommended_movies.empty:
-                    top_movie = recommended_movies.loc[recommended_movies['rating'].idxmax()]
+        if not st.session_state.user:
+            st.warning("로그인 후 추천 영화를 확인할 수 있습니다.")
+        else:
+            # 추천 기준 선택
+            recommendation_type = st.selectbox(
+                "추천 기준을 선택하세요",
+                ["가장 많은 리뷰 수", "가장 높은 평점", "사용자 별 점 평균 순"]
+            )
 
-                    st.subheader(top_movie['title'])
-                    poster_path = os.path.join(poster_folder, top_movie.get('poster_file', ''))
-                    if os.path.exists(poster_path) and pd.notna(top_movie.get('poster_file')):
-                        st.image(poster_path, width=200)
-                    else:
-                        st.write("포스터 이미지가 없습니다.")
-                    st.write(f"**평점**: {top_movie['rating']}")
-                    st.write(f"**장르**: {top_movie['genre']}")
-                    st.write(f"**상영 시간**: {top_movie.get('running_time', '정보 없음')}")
-                    st.write(f"**개봉일**: {top_movie['release_date']}")
+            # 영화별 리뷰 및 평점 데이터 처리
+            movie_review_counts = {}
+            movie_rating_sums = {}
+            movie_rated_users = {}
+
+            for r in ratings:
+                movie = r['movie']
+                movie_review_counts[movie] = movie_review_counts.get(movie, 0) + (1 if r.get('review') else 0)
+                movie_rating_sums[movie] = movie_rating_sums.get(movie, 0) + r['rating']
+                movie_rated_users[movie] = movie_rated_users.get(movie, 0) + 1
+
+            # 영화 데이터와 리뷰 데이터 병합
+            df['review_count'] = df['title'].map(movie_review_counts).fillna(0).astype(int)
+            df['total_rating'] = df['title'].map(movie_rating_sums).fillna(0.0)
+            df['user_count'] = df['title'].map(movie_rated_users).fillna(0).astype(int)
+            df['avg_star_rating'] = (df['total_rating'] / df['user_count']).fillna(0.0)
+
+            # 추천 정렬 기준에 따라 정렬
+            if recommendation_type == "가장 많은 리뷰 수":
+                recommended_movies = df.sort_values(by='review_count', ascending=False)
+            elif recommendation_type == "가장 높은 평점":
+                recommended_movies = df.sort_values(by='rating', ascending=False)
+            elif recommendation_type == "사용자 별 점 평균 순":
+                recommended_movies = df.sort_values(by='avg_star_rating', ascending=False)
+
+            # 추천 영화 출력
+            top_n = 5  # 추천 영화 개수
+            for _, movie in recommended_movies.head(top_n).iterrows():
+                st.subheader(movie['title'])
+
+                # 포스터 출력
+                poster_path = os.path.join(poster_folder, movie.get('poster_file', ''))
+                if os.path.exists(poster_path) and pd.notna(movie.get('poster_file')):
+                    st.image(poster_path, width=200)
                 else:
-                    st.write("추천할 영화가 없습니다.")
-            else:
-                st.write("추천 영화를 위해 평점을 먼저 남겨주세요.")
+                    st.write("포스터 이미지가 없습니다.")
+
+                # 영화 정보 출력
+                st.write(f"**평점**: {movie['rating']}")
+                st.write(f"**장르**: {movie['genre']}")
+                st.write(f"**상영 시간**: {movie.get('running_time', '정보 없음')}")
+                st.write(f"**개봉일**: {movie['release_date']}")
+                st.write(f"**리뷰 수**: {movie['review_count']}개")
+                st.write(f"**사용자 평균 별 점수**: {round(movie['avg_star_rating'], 2)}")
+
+                # 사용자 리뷰 출력
+                movie_reviews = [
+                    (r['username'], r['review']) for r in ratings 
+                    if r['movie'] == movie['title'] and r.get('review') is not None
+                ]
+                if movie_reviews:
+                    st.write("리뷰:")
+                    for username, review in movie_reviews:
+                        st.write(f"- **{username}**: {review}")
+                else:
+                    st.write("아직 리뷰가 없습니다.")
+                st.markdown("---")
+
 
     # 나의 활동
     with tab3:
