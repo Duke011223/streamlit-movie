@@ -7,9 +7,8 @@ import os
 @st.cache_data
 def load_data():
     try:
-        # 상대 경로로 수정
-        df = pd.read_csv("movie_data.csv", encoding='cp949')
-        df.columns = df.columns.str.strip().str.lower()  # 컬럼명 공백 제거 및 소문자화
+        df = pd.read_csv("movie_data.csv", encoding='utf-8')  # 'cp949'를 'utf-8'로 변경
+        df.columns = df.columns.str.strip().str.lower()
         return df
     except Exception as e:
         st.error(f"데이터 로드 오류: {e}")
