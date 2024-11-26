@@ -214,7 +214,7 @@ def main():
                 recommended_movies = df.sort_values(by='avg_star_rating', ascending=False)
 
             # 추천 영화 출력
-            top_n = 5  # 추천 영화 개수
+            top_n = 1  # 추천 영화 개수
             for _, movie in recommended_movies.head(top_n).iterrows():
                 st.subheader(movie['title'])
 
