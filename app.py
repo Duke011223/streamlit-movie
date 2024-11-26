@@ -3,7 +3,8 @@ import pandas as pd
 import hashlib
 import os
 
-# CSV 파일 로드 (캐시 없이 최신화된 데이터 불러오기)
+# CSV 파일 로드
+@st.cache_data
 def load_data():
     try:
         df = pd.read_csv("movie_data.csv", encoding='utf-8')  # 'cp949'를 'utf-8'로 변경
@@ -38,13 +39,15 @@ def main():
     st.set_page_config(page_title="영화 추천 시스템", layout="wide")
     st.title("🎬 영화 추천 및 검색 시스템")
 
-    # 새로고침 버튼을 추가하여 데이터를 최신화
-    refresh_button = st.button("새로 고침", key="refresh")
-    if refresh_button:
-        st.experimental_rerun()
+    # 새로고침 버튼을 눌렀을 때 데이터 새로 고침
+    if st.button("새로고침"):
+        # 캐시된 데이터를 무효화하고 새 데이터를 로드
+        st.cache_data.clear()  # 캐시를 삭제
+        df = load_data()  # 최신 데이터 로드
+        st.success("데이터가 새로 고침되었습니다.")
+    else:
+        df = load_data()  # 캐시된 데이터 사용
 
-    # 데이터 불러오기
-    df = load_data()  # 여기서 파일을 최신화된 상태로 읽어옵니다.
     users = load_users()
     ratings = load_ratings()
 
@@ -53,7 +56,6 @@ def main():
         st.session_state.role = None
 
     poster_folder = 'poster_url'  # 포스터가 저장된 폴더 경로
-
 
     # 사이드바 사용자 인증
     with st.sidebar:
