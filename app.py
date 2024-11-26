@@ -203,48 +203,39 @@ def main():
             df['review_count'] = df['title'].map(movie_review_counts).fillna(0).astype(int)
             df['total_rating'] = df['title'].map(movie_rating_sums).fillna(0.0)
             df['user_count'] = df['title'].map(movie_rated_users).fillna(0).astype(int)
-            df['avg_star_rating'] = (df['total_rating'] / df['user_count']).fillna(0.0)
 
-            # 추천 정렬 기준에 따라 정렬
             if recommendation_type == "가장 많은 리뷰 수":
                 recommended_movies = df.sort_values(by='review_count', ascending=False)
             elif recommendation_type == "가장 높은 평점":
-                recommended_movies = df.sort_values(by='rating', ascending=False)
+                recommended_movies = df.sort_values(by='total_rating', ascending=False)
             elif recommendation_type == "사용자 별 점 평균 순":
-                recommended_movies = df.sort_values(by='avg_star_rating', ascending=False)
+                recommended_movies = df.sort_values(by='user_count', ascending=False)
 
-            # 추천 영화 출력
-            top_n = 1  # 추천 영화 개수
-            for _, movie in recommended_movies.head(top_n).iterrows():
+            st.write(f"추천된 {recommendation_type} 기준의 영화:")
+            for _, movie in recommended_movies.head(5).iterrows():
                 st.subheader(movie['title'])
+                st.write(f"평점: {movie['rating']}")
 
-                # 포스터 출력
-                poster_path = os.path.join(poster_folder, movie.get('poster_file', ''))
-                if os.path.exists(poster_path) and pd.notna(movie.get('poster_file')):
-                    st.image(poster_path, width=200)
-                else:
-                    st.write("포스터 이미지가 없습니다.")
+    # 사용자 활동 관리
+    with tab3:
+        st.header("📈 나의 활동")
+        st.write("나의 활동 페이지")
 
-                # 영화 정보 출력
-                st.write(f"**평점**: {movie['rating']}")
-                st.write(f"**장르**: {movie['genre']}")
-                st.write(f"**상영 시간**: {movie.get('running_time', '정보 없음')}")
-                st.write(f"**개봉일**: {movie['release_date']}")
-                st.write(f"**리뷰 수**: {movie['review_count']}개")
-                st.write(f"**사용자 평균 별 점수**: {round(movie['avg_star_rating'], 2)}")
+    # 계정 관리
+    with tab4:
+        st.header("🔧 사용자 계정 관리")
+        st.write("계정 관리 페이지")
 
-                # 사용자 리뷰 출력
-                movie_reviews = [
-                    (r['username'], r['review']) for r in ratings 
-                    if r['movie'] == movie['title'] and r.get('review') is not None
-                ]
-                if movie_reviews:
-                    st.write("리뷰:")
-                    for username, review in movie_reviews:
-                        st.write(f"- **{username}**: {review}")
-                else:
-                    st.write("아직 리뷰가 없습니다.")
-                st.markdown("---")
+    # 관리자 보기
+    with tab5:
+        st.header("👑 관리자 보기")
+        if st.session_state.role == 'admin':
+            st.write("관리자 전용 정보")
+        else:
+            st.write("관리자만 접근할 수 있는 페이지입니다.")
+
+if __name__ == "__main__":
+    main()
 
 
     # 나의 활동
