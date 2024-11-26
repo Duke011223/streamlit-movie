@@ -236,6 +236,13 @@ def main():
     with tab5:
         st.header("👑 관리자 보기")
         if st.session_state.role == 'admin':
+            st.subheader("📋 회원 정보")
+            user_info = pd.DataFrame(users)
+            st.dataframe(user_info)
+
+            st.markdown("---")
+            st.subheader("📝 사용자 리뷰 관리")
+
             admin_ratings = load_ratings()
             if admin_ratings:
                 for r in admin_ratings:
@@ -248,8 +255,19 @@ def main():
                     # 리뷰 수정 기능
                     edit_review = st.expander(f"수정하기 ({r['username']} - {r['movie']})", expanded=False)
                     with edit_review:
-                        new_rating = st.number_input(f"새 평점 ({r['username']} - {r['movie']})", min_value=0.0, max_value=10.0, step=0.1, value=r['rating'], format="%.2f")
-                        new_review = st.text_area(f"새 리뷰 ({r['username']} - {r['movie']})", value=r['review'] if r['review'] else "", height=150)
+                        new_rating = st.number_input(
+                            f"새 평점 ({r['username']} - {r['movie']})", 
+                            min_value=0.0, 
+                            max_value=10.0, 
+                            step=0.1, 
+                            value=r['rating'], 
+                            format="%.2f"
+                        )
+                        new_review = st.text_area(
+                            f"새 리뷰 ({r['username']} - {r['movie']})", 
+                            value=r['review'] if r['review'] else "", 
+                            height=150
+                        )
 
                         if st.button(f"수정 저장 ({r['username']} - {r['movie']})", key=f"save-edit-review-{r['username']}-{r['movie']}"):
                             # 수정된 평점 및 리뷰 업데이트
@@ -263,6 +281,7 @@ def main():
                 st.write("현재 리뷰가 없습니다.")
         else:
             st.warning("관리자만 볼 수 있는 페이지입니다.")
+
 
 
 
