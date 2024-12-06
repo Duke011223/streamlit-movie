@@ -234,12 +234,16 @@ def main():
                             f"평점을 선택하세요 ({movie['title']})", 
                             min_value=0.0, 
                             max_value=10.0, 
-                            step=0.1, 
+                            step=0.01, 
                             format="%.2f",
-                            key=f"rating-{movie['movie_id']}"  # movie_id를 포함하여 고유한 key 생성
+                            key=f"rating-{movie['movie_id']}-{st.session_state.user}"  # movie_id를 포함하여 고유한 key 생성
                         )
 
-                        review = st.text_area(f"리뷰를 작성하세요 ({movie['title']})", placeholder="영화를 보고 느낀 점을 적어보세요...")
+                        review = st.text_area(
+                            f"리뷰를 작성하세요 ({movie['title']})", 
+                            placeholder="영화를 보고 느낀 점을 적어보세요...",
+                            key=f"review-{movie['movie_id']}-{st.session_state.user}"  # movie_id와 user를 포함하여 고유한 key 생성
+                        )
 
                         if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
                             ratings.append({
@@ -426,14 +430,12 @@ def main():
                             key=f"review-{movie['movie_id']}-{st.session_state.user}"
                         )
 
-                        # 수정 저장 버튼
                         if st.button(f"리뷰 수정 저장 ({r['영화 ID']})", key=f"save-edit-{r['영화 ID']}-{st.session_state.user}"):
                             admin_ratings[idx]['rating_value'] = round(new_rating, 2)
                             admin_ratings[idx]['review_text'] = new_review if new_review else None
                             save_ratings(admin_ratings)
                             st.success("리뷰가 성공적으로 수정되었습니다.")
 
-                        # 삭제 버튼
                         if st.button(f"리뷰 삭제 ({r['영화 ID']})", key=f"delete-review-{r['영화 ID']}-{st.session_state.user}"):
                             admin_ratings.pop(idx)  # 리뷰 제거
                             save_ratings(admin_ratings)
