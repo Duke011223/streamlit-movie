@@ -324,26 +324,34 @@ def main():
     with tab3:
         st.header("📈 나의 활동")
         if st.session_state.user:
-            user_reviews = [r for r in ratings if r['user_id'] == st.session_state.user]
+            user_reviews = [r for r in ratings if r.get('user_id') == st.session_state.user]
             if user_reviews:
                 st.write("내가 남긴 리뷰:")
                 for review in user_reviews:
-                    st.write(f"- **영화 ID**: {review['movie_id']}, **평점**: {review['rating_value']}, **리뷰**: {review.get('review_text', '없음')}")
-
+                    st.write(
+                        f"- **영화 ID**: {review.get('movie_id', 'N/A')}, "
+                        f"**평점**: {review.get('rating_value', 'N/A')}, "
+                        f"**리뷰**: {review.get('review_text', '없음')}"
+                    )
             else:
                 st.write("아직 리뷰를 작성하지 않았습니다.")
         else:
             st.warning("로그인 후 활동을 확인할 수 있습니다.")
+
     # 사용자 계정 관리
     with tab4:
         st.header("🔧 사용자 계정 관리")
         if st.session_state.user:
-            user = next(u for u in users if u['username'] == st.session_state.user)
-            new_password = st.text_input("새 비밀번호", type="password")
-            if st.button("비밀번호 변경"):
-                user['password'] = hash_password(new_password)
-                save_users(users)
-                st.success("비밀번호가 변경되었습니다.")
+            user = next((u for u in users if u.get('username') == st.session_state.user), None)
+            if user:
+                new_password = st.text_input("새 비밀번호", type="password")
+                if st.button("비밀번호 변경"):
+                    if new_password:
+                        user['password'] = hash_password(new_password)
+                        save_users(users)
+                        st.success("비밀번호가 변경되었습니다.")
+                    else:
+                        st.warning("비밀번호를 입력해주세요.")
         else:
             st.warning("로그인 후 계정 관리가 가능합니다.")
 
@@ -353,8 +361,11 @@ def main():
         if st.session_state.role == 'admin':
             # 회원 정보
             st.subheader("📋 회원 정보")
-            user_info = pd.DataFrame(users)
-            st.dataframe(user_info)
+            if users:
+                user_info = pd.DataFrame(users)
+                st.dataframe(user_info)
+            else:
+                st.write("등록된 사용자가 없습니다.")
 
             st.markdown("---")
             st.subheader("📝 사용자 리뷰 관리")
@@ -362,52 +373,50 @@ def main():
             # 사용자 리뷰 데이터를 테이블 형태로 출력
             admin_ratings = load_ratings()
             if admin_ratings:
-                # 사용자 리뷰를 DataFrame으로 변환
-                reviews_df = pd.DataFrame(admin_ratings)
-                reviews_df = reviews_df[['user_id', 'movie_id', 'rating_value', 'review_text']]
-
-                reviews_df = reviews_df.rename(columns={
-                    'user_id': '사용자명',
-                    'movie_id': '영화 ID',
-                    'rating_value': '평점',
-                    'review_text': '리뷰'
-                })
-
-                # 데이터 출력
-                st.write("사용자 리뷰를 한눈에 확인하세요:")
-                st.dataframe(reviews_df[['사용자명', '영화 ID', '평점', '리뷰']].sort_values(by='영화 ID'))
+                try:
+                    reviews_df = pd.DataFrame(admin_ratings)
+                    reviews_df = reviews_df[['user_id', 'movie_id', 'rating_value', 'review_text']]
+                    reviews_df = reviews_df.rename(columns={
+                        'user_id': '사용자명',
+                        'movie_id': '영화 ID',
+                        'rating_value': '평점',
+                        'review_text': '리뷰'
+                    })
+                    st.write("사용자 리뷰를 한눈에 확인하세요:")
+                    st.dataframe(reviews_df.sort_values(by='영화 ID'))
+                except KeyError:
+                    st.error("리뷰 데이터에 필요한 열이 없습니다.")
 
                 st.markdown("---")
                 # 개별 리뷰 수정
                 st.subheader("🔧 리뷰 수정 및 삭제")
                 for idx, r in reviews_df.iterrows():
-                    with st.expander(f"{r['사용자명']} - {r['영화 제목']}"):
-                        # 수정할 데이터 표시
-                        st.write(f"**영화 제목**: {r['영화 제목']}")
+                    with st.expander(f"{r['사용자명']} - 영화 ID {r['영화 ID']}"):
                         st.write(f"**현재 평점**: {r['평점']}")
                         st.write(f"**현재 리뷰**: {r['리뷰'] if r['리뷰'] else '없음'}")
 
-                        # 평점 및 리뷰 수정 입력
-                        admin_ratings[idx] = {
-                            'user_id': r['사용자명'],
-                            'movie_id': r['영화 ID'],
-                            'rating_value': new_rating,
-                            'review_text': r['리뷰']
-                        }
+                        # 수정할 평점 및 리뷰 입력
+                        new_rating = st.number_input(
+                            f"새 평점 (현재: {r['평점']})",
+                            min_value=0.0,
+                            max_value=10.0,
+                            step=0.1,
+                            value=float(r['평점'])
+                        )
                         new_review = st.text_area(
-                            f"새 리뷰 ({r['영화 제목']})", 
-                            value=admin_ratings[idx]['review'] if admin_ratings[idx].get('review') else ""
+                            f"새 리뷰 (현재: {r['리뷰']})",
+                            value=r['리뷰'] if r['리뷰'] else ""
                         )
 
                         # 수정 저장 버튼
-                        if st.button(f"리뷰 수정 저장 ({r['영화 제목']})", key=f"save-edit-{idx}"):
-                            admin_ratings[idx]['rating_value'] = new_rating
+                        if st.button(f"리뷰 수정 저장 ({r['영화 ID']})", key=f"save-edit-{idx}"):
+                            admin_ratings[idx]['rating_value'] = round(new_rating, 2)
                             admin_ratings[idx]['review_text'] = new_review if new_review else None
                             save_ratings(admin_ratings)
                             st.success("리뷰가 성공적으로 수정되었습니다.")
 
                         # 삭제 버튼
-                        if st.button(f"리뷰 삭제 ({r['영화 제목']})", key=f"delete-review-{idx}"):
+                        if st.button(f"리뷰 삭제 ({r['영화 ID']})", key=f"delete-review-{idx}"):
                             admin_ratings.pop(idx)  # 리뷰 제거
                             save_ratings(admin_ratings)
                             st.warning(f"{r['사용자명']}의 리뷰가 삭제되었습니다.")
@@ -415,6 +424,7 @@ def main():
                 st.write("현재 등록된 리뷰가 없습니다.")
         else:
             st.warning("관리자만 볼 수 있는 페이지입니다.")
+
 
 if __name__ == "__main__":
     main()
