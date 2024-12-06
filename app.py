@@ -411,16 +411,19 @@ def main():
                         st.write(f"**현재 리뷰**: {r['리뷰'] if r['리뷰'] else '없음'}")
 
                         # 수정할 평점 및 리뷰 입력
-                        new_rating = st.number_input(
-                            f"새 평점 (현재: {r['평점']})",
-                            min_value=0.0,
-                            max_value=10.0,
-                            step=0.1,
-                            value=float(r['평점'])
+                        rating = st.number_input(
+                            f"평점을 선택하세요 ({movie['title']})", 
+                            min_value=0.0, 
+                            max_value=10.0, 
+                        step=0.1, 
+                            format="%.2f",
+                            key=f"rating-{movie['movie_id']}"  # 고유한 key
                         )
-                        new_review = st.text_area(
-                            f"새 리뷰 (현재: {r['리뷰']})",
-                            value=r['리뷰'] if r['리뷰'] else ""
+
+                        review = st.text_area(
+                            f"리뷰를 작성하세요 ({movie['title']})", 
+                            placeholder="영화를 보고 느낀 점을 적어보세요...",
+                            key=f"review-{movie['movie_id']}"  # 고유한 key
                         )
 
                         # 수정 저장 버튼
