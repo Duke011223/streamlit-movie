@@ -1,5 +1,0 @@
-PyGithub
-streamlit
-pandas
-numpy
-hashlib
