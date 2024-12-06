@@ -1,44 +1,45 @@
 from github import Github
-import streamlit as st
 import pandas as pd
-import hashlib
-import os
+import streamlit as st
+import base64
 
 # GitHub 설정
 GITHUB_TOKEN = "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"
-REPO_OWNER = "Duke011223"  # 본인의 GitHub 사용자명
-REPO_NAME = "streamlit-movie"  # 레포지토리 이름
-FILE_PATH = "movie_ratings.csv"  # GitHub에 저장된 리뷰 파일 경로
+REPO_OWNER = "Duke011223"
+REPO_NAME = "streamlit-movie"
+FILE_PATH = "movie_ratings.csv"
 
 def save_ratings_to_github(ratings):
     try:
         # DataFrame 생성
         df = pd.DataFrame(ratings)
-
+        
         # GitHub 연결
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
 
-        # GitHub에서 기존 파일 가져오기
-        contents = repo.get_contents(FILE_PATH)
-
-        # 기존 데이터 로드
-        existing_data = pd.read_csv(contents.decoded_content.decode('utf-8'))
-
-        # 새로운 데이터와 병합
-        updated_data = pd.concat([existing_data, df]).drop_duplicates()
+        # 파일 읽기 또는 새로 생성
+        try:
+            contents = repo.get_contents(FILE_PATH)
+            existing_data = pd.read_csv(contents.decoded_content.decode('utf-8'))
+            updated_data = pd.concat([existing_data, df]).drop_duplicates()
+            sha = contents.sha
+        except Exception as e:  # 파일이 없을 경우 새로 생성
+            st.warning("GitHub에 기존 파일이 없어 새 파일을 생성합니다.")
+            updated_data = df
+            sha = None
 
         # 업데이트된 파일 GitHub에 저장
         repo.update_file(
             path=FILE_PATH,
             message="Update movie_ratings.csv",
             content=updated_data.to_csv(index=False, encoding='utf-8'),
-            sha=contents.sha
+            sha=sha if sha else None  # sha가 없으면 파일 생성
         )
         st.success("GitHub에 리뷰가 성공적으로 저장되었습니다!")
     except Exception as e:
         st.error(f"GitHub에 저장하는 중 오류 발생: {e}")
-
+        print(f"Error: {e}")  # 터미널에 에러 로그 출력
 
 # CSV 파일 로드
 @st.cache_data
