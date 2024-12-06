@@ -4,35 +4,41 @@ import pandas as pd
 import hashlib
 import os
 
-
 # GitHub 설정
 GITHUB_TOKEN = "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"
 REPO_OWNER = "Duke011223"  # 본인의 GitHub 사용자명
-REPO_NAME = "streamlit-movie"   # 레포지토리 이름
-FILE_PATH = "movie_data.csv"         # GitHub 파일 경로
+REPO_NAME = "streamlit-movie"  # 레포지토리 이름
+FILE_PATH = "movie_ratings.csv"  # GitHub에 저장된 리뷰 파일 경로
 
 def save_ratings_to_github(ratings):
     try:
-        # DataFrame으로 변환
+        # DataFrame 생성
         df = pd.DataFrame(ratings)
-        
+
         # GitHub 연결
         g = Github(GITHUB_TOKEN)
-        repo = g.get_repo(GITHUB_REPO)
-        
-        # 기존 파일 가져오기
+        repo = g.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
+
+        # GitHub에서 기존 파일 가져오기
         contents = repo.get_contents(FILE_PATH)
-        
-        # 파일 업데이트
+
+        # 기존 데이터 로드
+        existing_data = pd.read_csv(contents.decoded_content.decode('utf-8'))
+
+        # 새로운 데이터와 병합
+        updated_data = pd.concat([existing_data, df]).drop_duplicates()
+
+        # 업데이트된 파일 GitHub에 저장
         repo.update_file(
             path=FILE_PATH,
             message="Update movie_ratings.csv",
-            content=df.to_csv(index=False, encoding='utf-8'),
+            content=updated_data.to_csv(index=False, encoding='utf-8'),
             sha=contents.sha
         )
-        st.success("GitHub에 리뷰가 저장되었습니다.")
+        st.success("GitHub에 리뷰가 성공적으로 저장되었습니다!")
     except Exception as e:
-        st.error(f"GitHub에 저장하는 중 오류가 발생했습니다: {e}")
+        st.error(f"GitHub에 저장하는 중 오류 발생: {e}")
+
 
 # CSV 파일 로드
 @st.cache_data
@@ -374,7 +380,6 @@ def main():
                             })
                             save_ratings_to_github(ratings)
                             st.success("평점과 리뷰가 GitHub에 저장되었습니다.")
-
 
                         # 삭제 버튼
                         if st.button(f"리뷰 삭제 ({r['영화 제목']})", key=f"delete-review-{idx}"):
