@@ -308,9 +308,10 @@ def main():
 
                 # 사용자 리뷰 출력
                 movie_reviews = [
-                    r['review_text'] for r in ratings
-                    if r['movie_id'] == movie['movie_id'] and r.get('review_text')
+                    (r.get('user_id', 'Unknown'), r.get('review_text', 'No Review'))
+                    for r in ratings if r.get('movie_id') == movie['movie_id']
                 ]
+
                 if movie_reviews:
                     st.write("리뷰:")
                     for username, review in movie_reviews:
