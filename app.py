@@ -1,6 +1,8 @@
 from github import Github
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import hashlib
+import os
 import base64
 
 # GitHub 설정
@@ -9,37 +11,34 @@ REPO_OWNER = "Duke011223"
 REPO_NAME = "streamlit-movie"
 FILE_PATH = "movie_ratings.csv"
 
-def save_ratings_to_github(ratings):
+def save_rating_to_github(new_rating):
     try:
-        # DataFrame 생성
-        df = pd.DataFrame(ratings)
-        
         # GitHub 연결
         g = Github(GITHUB_TOKEN)
         repo = g.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
 
-        # 파일 읽기 또는 새로 생성
+        # 기존 데이터 가져오기
         try:
             contents = repo.get_contents(FILE_PATH)
             existing_data = pd.read_csv(contents.decoded_content.decode('utf-8'))
-            updated_data = pd.concat([existing_data, df]).drop_duplicates()
-            sha = contents.sha
-        except Exception as e:  # 파일이 없을 경우 새로 생성
-            st.warning("GitHub에 기존 파일이 없어 새 파일을 생성합니다.")
-            updated_data = df
-            sha = None
+        except Exception:
+            # 파일이 없으면 새로 생성
+            existing_data = pd.DataFrame(columns=['username', 'movie', 'rating', 'review'])
 
-        # 업데이트된 파일 GitHub에 저장
+        # 새로운 데이터 추가 및 중복 제거
+        updated_data = pd.concat([existing_data, pd.DataFrame([new_rating])]).drop_duplicates()
+
+        # 업데이트된 데이터 저장
         repo.update_file(
             path=FILE_PATH,
-            message="Update movie_ratings.csv",
+            message="Add new review",
             content=updated_data.to_csv(index=False, encoding='utf-8'),
-            sha=sha if sha else None  # sha가 없으면 파일 생성
+            sha=contents.sha if 'contents' in locals() else None
         )
-        st.success("GitHub에 리뷰가 성공적으로 저장되었습니다!")
+        st.success("리뷰가 성공적으로 GitHub에 저장되었습니다!")
     except Exception as e:
-        st.error(f"GitHub에 저장하는 중 오류 발생: {e}")
-        print(f"Error: {e}")  # 터미널에 에러 로그 출력
+        st.error(f"GitHub에 저장하는 중 오류가 발생했습니다: {e}")
+        print(f"Error: {e}")  # 디버깅 로그 출력
 
 # CSV 파일 로드
 @st.cache_data
@@ -217,8 +216,7 @@ def main():
                                 'rating': round(rating, 2),
                                 'review': review if review else None
                             })
-                            save_ratings(ratings)
-                            st.success("평점과 리뷰가 저장되었습니다.")
+                            save_rating_to_github(new_rating)  # 리뷰를 GitHub에 저장
 
     # 추천 영화
     with tab2:
@@ -372,15 +370,11 @@ def main():
                         )
 
                         # 수정 저장 버튼
-                        if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
-                            ratings.append({
-                                'username': st.session_state.user, 
-                                'movie': movie['title'], 
-                                'rating': round(rating, 2),
-                                'review': review if review else None
-                            })
-                            save_ratings_to_github(ratings)
-                            st.success("평점과 리뷰가 GitHub에 저장되었습니다.")
+                        if st.button(f"리뷰 수정 저장 ({r['영화 제목']})", key=f"save-edit-{idx}"):
+                            admin_ratings[idx]['rating'] = new_rating
+                            admin_ratings[idx]['review'] = new_review if new_review else None
+                            save_ratings(admin_ratings)
+                            st.success("리뷰가 성공적으로 수정되었습니다.")
 
                         # 삭제 버튼
                         if st.button(f"리뷰 삭제 ({r['영화 제목']})", key=f"delete-review-{idx}"):
