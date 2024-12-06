@@ -414,21 +414,28 @@ def main():
                         st.write(f"**현재 평점**: {r['평점']}")
                         st.write(f"**현재 리뷰**: {r['리뷰'] if r['리뷰'] else '없음'}")
 
-                        # 수정할 평점 및 리뷰 입력
+                        # 'unique_key'를 추가하여 `key` 값의 중복을 방지
+                        if 'unique_key' not in st.session_state:
+                            st.session_state.unique_key = 0  # 최초 0부터 시작
+
+                        # 매 렌더링마다 unique_key를 증가시켜 고유한 key 생성
                         rating = st.number_input(
                             f"평점을 선택하세요 ({movie['title']})", 
-                            min_value=0.0, 
-                            max_value=10.0, 
-                            step=0.01, 
-                            format="%.2f",
-                            key=f"rating-{movie['movie_id']}-{st.session_state.user}-{st.session_state.get('unique_key', 0)}"  # 고유한 key 생성
+                                min_value=0.0, 
+                                max_value=10.0, 
+                                step=0.1, 
+                                ormat="%.2f",
+                                key=f"rating-{movie['movie_id']}-{st.session_state.user}-{st.session_state.unique_key}"
                         )
 
                         review = st.text_area(
                             f"리뷰를 작성하세요 ({movie['title']})", 
                             placeholder="영화를 보고 느낀 점을 적어보세요...",
-                            key=f"review-{movie['movie_id']}-{st.session_state.user}-{st.session_state.get('unique_key', 0)}"  # 고유한 key 생성
+                            key=f"review-{movie['movie_id']}-{st.session_state.user}-{st.session_state.unique_key}"
                         )
+
+                        # 고유한 key를 증가시킴
+                        st.session_state.unique_key += 1
 
                         if st.button(f"리뷰 수정 저장 ({r['영화 ID']})", key=f"save-edit-{r['영화 ID']}-{st.session_state.user}"):
                             admin_ratings[idx]['rating_value'] = round(new_rating, 2)
