@@ -193,14 +193,14 @@ def main():
                 st.markdown("---")
 
                 # 영화에 대한 평점 표시
-                movie_ratings = [r['rating'] for r in ratings if r['movie'] == movie['title']]
+                movie_ratings = [r['rating_value'] for r in ratings if r['movie_id'] == movie['movie_id']]
                 if movie_ratings:
                     avg_rating = round(sum(movie_ratings) / len(movie_ratings), 2)
                     st.write(f"사이트 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
                 else:
                     st.write("아직 평점이 없습니다.")
 
-                movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['movie'] and r.get('review') is not None]
+                movie_reviews = [r['review_text'] for r in ratings if r['movie_id'] == movie['movie_id'] and r.get('review_text') is not None]
                 if movie_reviews:
                     st.write("리뷰:")
                     for review in movie_reviews:
@@ -217,10 +217,10 @@ def main():
 
                         if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
                             ratings.append({
-                                'username': st.session_state.user,  # 사용자명 추가
-                                'movie': movie['title'],            # 영화 제목 컬럼명 확인
-                                'rating': round(rating, 2),         # 평점
-                                'review': review if review else None  # 리뷰
+                                'user_id': st.session_state.user,  # username → user_id로 변경
+                                'movie_id': movie['movie_id'],    # movie → movie_id로 변경
+                                'rating_value': round(rating, 2), # rating → rating_value로 변경
+                                'review_text': review if review else None 
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
@@ -250,7 +250,7 @@ def main():
                 movie_rated_users[movie] = movie_rated_users.get(movie, 0) + 1
 
             # 영화 데이터와 리뷰 데이터 병합
-            df['review_count'] = df['movie'].map(movie_review_counts).fillna(0).astype(int)
+            df['review_count'] = df['movie_id'].map(movie_review_counts).fillna(0).astype(int)
             df['total_rating'] = df['title'].map(movie_rating_sums).fillna(0.0)
             df['user_count'] = df['title'].map(movie_rated_users).fillna(0).astype(int)
             df['avg_star_rating'] = (df['total_rating'] / df['user_count']).fillna(0.0)
