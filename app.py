@@ -5,7 +5,7 @@ import os
 import base64
 import requests
 
-# GitHub API 설정
+# GitHub API 관련 설정
 GITHUB_TOKEN = "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"
 GITHUB_USERNAME = "Duke011223"
 REPO_NAME = "streamlit-movie"
@@ -14,20 +14,20 @@ RATINGS_FILE_PATH = "movie_ratings.csv"
 # GitHub 파일 업데이트 함수
 def save_ratings_to_github(local_file_path, repo_file_path):
     url = f"https://api.github.com/repos/{GITHUB_USERNAME}/{REPO_NAME}/contents/{repo_file_path}"
+
+    # 현재 GitHub의 파일 상태 가져오기
     response = requests.get(url, headers={"Authorization": f"token {GITHUB_TOKEN}"})
     if response.status_code == 200:
-        sha = response.json().get("sha")
+        sha = response.json()["sha"]  # 기존 파일이 존재할 경우 SHA 가져오기
     else:
-        sha = None
+        sha = None  # 새 파일
 
+    # 로컬 파일 내용 읽기
     with open(local_file_path, "rb") as f:
         content = base64.b64encode(f.read()).decode("utf-8")
 
-    data = {
-        "message": "Update movie_ratings.csv",
-        "content": content,
-        "branch": "main",
-    }
+    # GitHub에 파일 업로드 요청
+    data = {"message": "Update movie_ratings.csv", "content": content, "branch": "main"}
     if sha:
         data["sha"] = sha
 
@@ -35,16 +35,18 @@ def save_ratings_to_github(local_file_path, repo_file_path):
     if response.status_code in [200, 201]:
         print("GitHub 파일이 성공적으로 업데이트되었습니다.")
     else:
-        print(f"GitHub 업데이트 실패: {response.status_code}, {response.json()}")
+        print(f"GitHub 파일 업데이트 실패: {response.status_code}, {response.json()}")
 
 # CSV 파일 로드
 @st.cache_data
 def load_data():
     try:
-        return pd.read_csv("movie_data.csv", encoding="utf-8").to_dict("records")
-    except UnicodeDecodeError:
-        st.error("movie_data.csv 파일 인코딩 문제 발생!")
-        return []
+        df = pd.read_csv("movie_data.csv", encoding="utf-8")
+        df.columns = df.columns.str.strip().str.lower()
+        return df
+    except Exception as e:
+        st.error(f"데이터 로드 오류: {e}")
+        return pd.DataFrame()
 
 def save_users(users):
     pd.DataFrame(users).to_csv("movie_users.csv", index=False, encoding="utf-8")
@@ -55,8 +57,7 @@ def load_users():
         try:
             return pd.read_csv(path, encoding="utf-8").to_dict("records")
         except UnicodeDecodeError:
-            st.error("movie_users.csv 파일 인코딩 문제 발생!")
-            return []
+            return pd.read_csv(path, encoding="cp949").to_dict("records")
     return []
 
 def save_ratings(ratings):
@@ -65,41 +66,45 @@ def save_ratings(ratings):
 def load_ratings():
     path = "movie_ratings.csv"
     if os.path.exists(path):
-        encodings = ["utf-8", "cp949", "latin1"]
-        for encoding in encodings:
+        try:
+            return pd.read_csv(path, encoding="utf-8").to_dict("records")
+        except UnicodeDecodeError:
             try:
-                return pd.read_csv(path, encoding=encoding).to_dict("records")
+                return pd.read_csv(path, encoding="cp949").to_dict("records")
             except UnicodeDecodeError:
-                continue
-        st.error("movie_ratings.csv 파일 인코딩을 감지할 수 없습니다.")
-    else:
-        st.error("movie_ratings.csv 파일이 존재하지 않습니다.")
+                return pd.read_csv(path, encoding="latin1").to_dict("records")
     return []
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Streamlit App 메인 함수
 def main():
     st.set_page_config(page_title="영화 추천 시스템", layout="wide")
     st.title("🎬 영화 추천 및 검색 시스템")
 
-    # 데이터 로드
-    df = load_data()
+    # 새로고침 버튼을 눌렀을 때 데이터 새로 고침
+    if st.button("새로고침"):
+        st.cache_data.clear()
+        df = load_data()
+        ratings = load_ratings()
+        st.success("데이터가 새로 고침되었습니다.")
+    else:
+        df = load_data()
+
     users = load_users()
     ratings = load_ratings()
 
-    if "user" not in st.session_state:
+    if 'user' not in st.session_state:
         st.session_state.user = None
         st.session_state.role = None
 
-    poster_folder = "poster_url"
+    poster_folder = 'poster_url'  # 포스터가 저장된 폴더 경로
 
-    # 사이드바
+    # 사이드바 사용자 인증
     with st.sidebar:
         st.header("👤 사용자 인증")
         if st.session_state.user:
-            st.write(f"환영합니다, **{st.session_state.user}**님!")
+            st.write(f"환영합니다, **{st.session_state.user}님!**")
             if st.button("로그아웃"):
                 st.session_state.user = None
                 st.session_state.role = None
@@ -110,45 +115,51 @@ def main():
                 username = st.text_input("사용자명")
                 password = st.text_input("비밀번호", type="password")
                 if st.button("로그인"):
-                    user = next((u for u in users if u["username"] == username and u["password"] == hash_password(password)), None)
+                    user = next((u for u in users if u['username'] == username and u['password'] == hash_password(password)), None)
                     if user:
                         st.session_state.user = username
-                        st.session_state.role = user["role"]
+                        st.session_state.role = user['role']
                         st.success("로그인 성공!")
                     else:
                         st.error("잘못된 사용자명 또는 비밀번호입니다.")
-            elif choice == "회원가입":
+            else:
                 new_username = st.text_input("새 사용자명")
                 new_password = st.text_input("새 비밀번호", type="password")
                 if st.button("회원가입"):
-                    if any(u["username"] == new_username for u in users):
+                    if any(u['username'] == new_username for u in users):
                         st.error("이미 존재하는 사용자명입니다.")
                     else:
-                        users.append({"username": new_username, "password": hash_password(new_password), "role": "user"})
+                        users.append({'username': new_username, 'password': hash_password(new_password), 'role': 'user'})
                         save_users(users)
-                        st.success("회원가입 성공! 이제 로그인하세요.")
+                        st.success("회원가입 성공! 이제 로그인할 수 있습니다.")
 
-    # 영화 검색 및 기타 기능은 그대로 두기
+        st.markdown("---")
+
+    # 탭 구성
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 영화 검색", "⭐ 추천 영화", "📈 나의 활동", "🔧 사용자 계정 관리", "👑 관리자 보기"])
 
     # 영화 검색
     with tab1:
         st.header("🎥 영화 검색")
-        search_term = st.text_input("🔍 검색", placeholder="영화 제목을 입력하세요...")
-        genre_filter = st.selectbox("🎭 장르 필터", options=["모든 장르"] + df['genre'].unique().tolist())
 
-        # 필터링 및 페이지네이션
-        if search_term.strip():
-            filtered_df = df[df['title'].str.contains(search_term, case=False)]
-        else:
-            filtered_df = df
+        # 장르 필터 처리
+        try:
+            genre_filter = st.selectbox("🎭 장르 필터", options=["모든 장르"] + df['genre'].unique().tolist())
+        except Exception as e:
+            st.error(f"'genre_filter' 처리 중 오류 발생: {e}")
+            st.stop()
+
+        # 영화 검색 및 페이지 출력
+        search_term = st.text_input("🔍 검색", placeholder="영화 제목을 입력하세요...")
+        filtered_df = df[df['title'].str.contains(search_term, case=False)] if search_term.strip() else df
         if genre_filter != "모든 장르":
             filtered_df = filtered_df[filtered_df['genre'] == genre_filter]
 
-        total_movies = len(filtered_df)
-        if total_movies == 0:
+        if filtered_df.empty:
             st.warning("검색 결과가 없습니다.")
         else:
+            # 페이지네이션 추가
+            total_movies = len(filtered_df)
             page_size = 5
             total_pages = (total_movies // page_size) + (1 if total_movies % page_size != 0 else 0)
             page = st.number_input("페이지 번호", min_value=1, max_value=total_pages, value=1)
@@ -162,9 +173,9 @@ def main():
                 # 영화 데이터에서 포스터 파일 경로 추출
                 poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
                 if os.path.exists(poster_path) and pd.notna(movie.get('poster_url')):
-                    st.image(poster_path, width=200)  # 이미지 표시
+                    st.image(poster_path, width=200)
                 else:
-                    st.write("포스터 이미지가 없습니다.")  # 이미지가 없을 경우 메시지 출력
+                    st.write("포스터 이미지가 없습니다.")
 
                 # 영화 정보 출력
                 st.write(f"**영화 ID**: {movie['movie_id']}")
@@ -202,18 +213,19 @@ def main():
                 ]
 
                 if movie_reviews:
-                    for review in movie_reviews:
-                        if isinstance(review, tuple) and len(review) == 2:
-                            username, text = review
-                            st.write(f"- **{username}**: {text}")
-                        else:
-                            st.write("아직 리뷰가 없습니다.")
+                    st.write("리뷰:")
+                    for username, review in movie_reviews:
+                        st.write(f"- **{username}**: {review}")
+                else:
+                    st.write("아직 리뷰가 없습니다.")
 
                 if st.session_state.user:
                     if any(r['user_id'] == st.session_state.user and r['movie_id'] == movie['movie_id'] for r in ratings):
                         st.info("이미 이 영화에 평점과 리뷰를 남겼습니다.")
                     else:
-                        rating = st.number_input(f"평점을 선택하세요 ({movie['title']})", min_value=0.0, max_value=10.0, step=0.1, format="%.2f")
+                        rating = st.number_input(
+                            f"평점을 선택하세요 ({movie['title']})", min_value=0.0, max_value=10.0, step=0.1, format="%.2f"
+                        )
                         review = st.text_area(f"리뷰를 작성하세요 ({movie['title']})", placeholder="영화를 보고 느낀 점을 적어보세요...")
 
                         if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
@@ -225,14 +237,16 @@ def main():
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
-    
+
                             # GitHub 업데이트
                             try:
                                 save_ratings_to_github("movie_ratings.csv", RATINGS_FILE_PATH)
+                                st.success("GitHub에 업데이트가 성공적으로 반영되었습니다.")
                             except requests.exceptions.RequestException as e:
                                 st.error(f"GitHub 업데이트 실패: {e}")
                             except Exception as e:
                                 st.error(f"예기치 못한 오류 발생: {e}")
+
 
     # 추천 영화
     with tab2:
