@@ -6,7 +6,7 @@ import os
 import base64
 
 # GitHub 설정
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"
 REPO_OWNER = "Duke011223"
 REPO_NAME = "streamlit-movie"
 FILE_PATH = "movie_ratings.csv"
