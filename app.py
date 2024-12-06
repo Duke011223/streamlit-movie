@@ -145,7 +145,7 @@ def main():
         genre_filter = st.selectbox("🎭 장르 필터", options=["모든 장르"] + df['genre'].unique().tolist())
 
         # 필터링 및 페이지네이션
-        filtered_df = df[df['title'].str.contains(search_term, case=False)]
+        filtered_df = df[df['movie'].str.contains(search_term, case=False)]
         if genre_filter != "모든 장르":
             filtered_df = filtered_df[filtered_df['genre'] == genre_filter]
 
@@ -161,7 +161,7 @@ def main():
             end_idx = min(page * page_size, total_movies)
 
             for _, movie in filtered_df.iloc[start_idx:end_idx].iterrows():
-                st.subheader(movie['title'])
+                st.subheader(movie['movie'])
 
                 # 영화 데이터에서 포스터 파일 경로 추출
                 poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
@@ -200,7 +200,7 @@ def main():
                 else:
                     st.write("아직 평점이 없습니다.")
 
-                movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['title'] and r.get('review') is not None]
+                movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['movie'] and r.get('review') is not None]
                 if movie_reviews:
                     st.write("리뷰:")
                     for review in movie_reviews:
