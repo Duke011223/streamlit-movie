@@ -224,6 +224,8 @@ def main():
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
+                            save_ratings_to_github("movie_ratings.csv", RATINGS_FILE_PATH)  # GitHub 파일 업데이트
+                            st.success("평점과 리뷰가 저장되었으며, GitHub에도 업데이트되었습니다.")
 
     # 추천 영화
     with tab2:
