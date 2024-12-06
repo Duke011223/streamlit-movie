@@ -23,91 +23,14 @@ def load_users():
         return pd.read_csv(path, encoding='cp949').to_dict('records')
     return []
 
-# 평점 데이터 읽기 함수
-import pandas as pd
-import streamlit as st
-
-# 평점 데이터 읽기 함수
-def load_ratings():
-    try:
-        # CSV 파일에서 평점 데이터를 읽어옴
-        ratings_df = pd.read_csv("movie_ratings.csv", encoding='cp949')
-        
-        # rating_id 열이 없으면 추가
-        if 'rating_id' not in ratings_df.columns:
-            st.warning("rating_id 열이 누락되어 자동으로 추가됩니다.")
-            ratings_df.insert(0, 'rating_id', range(1, len(ratings_df) + 1))
-            save_ratings(ratings_df.to_dict('records'))  # 수정된 데이터를 다시 저장
-        
-        # 데이터 반환
-        return ratings_df.to_dict('records')
-    except Exception as e:
-        st.error(f"평점 데이터를 불러오는 중 오류가 발생했습니다: {e}")
-        return []
-
-# 평점 데이터 저장 함수
 def save_ratings(ratings):
-    try:
-        # 평점 데이터를 DataFrame으로 변환하여 저장
-        ratings_df = pd.DataFrame(ratings)
-        ratings_df.to_csv("movie_ratings.csv", index=False, encoding='cp949')
-        st.success("평점 데이터가 성공적으로 저장되었습니다.")
-    except Exception as e:
-        st.error(f"평점 데이터를 저장하는 중 오류가 발생했습니다: {e}")
+    pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding='cp949')
 
-# 관리자 리뷰 관리 함수
-def manage_reviews():
-    admin_ratings = load_ratings()
-    if admin_ratings:
-        reviews_df = pd.DataFrame(admin_ratings)
-        reviews_df = reviews_df[['user_id', 'movie_id', 'rating_value', 'review_text']]  # 필요한 열만 선택
-
-        reviews_df = reviews_df.rename(columns={
-            'user_id': '사용자명',
-            'movie_id': '영화 ID',
-            'rating_value': '평점',
-            'review_text': '리뷰'
-        })
-
-        st.write("사용자 리뷰를 한눈에 확인하세요:")
-        st.dataframe(reviews_df[['사용자명', '영화 ID', '평점', '리뷰']])
-
-        st.markdown("---")
-        st.subheader("🔧 리뷰 수정 및 삭제")
-        for idx, review in reviews_df.iterrows():
-            with st.expander(f"{review['사용자명']} - 영화 ID: {review['영화 ID']}"):
-                st.write(f"**현재 평점**: {review['평점']}")
-                st.write(f"**현재 리뷰**: {review['리뷰'] if pd.notna(review['리뷰']) else '없음'}")
-
-                # 평점 및 리뷰 수정 입력
-                new_rating = st.number_input(
-                    f"새 평점 (영화 ID: {review['영화 ID']})",
-                    min_value=0.0,
-                    max_value=10.0,
-                    step=0.1,
-                    value=review['평점'],
-                    key=f"new_rating_{idx}"
-                )
-                new_review = st.text_area(
-                    f"새 리뷰 (영화 ID: {review['영화 ID']})",
-                    value=review['리뷰'] if pd.notna(review['리뷰']) else "",
-                    key=f"new_review_{idx}"
-                )
-
-                # 수정 저장 버튼
-                if st.button(f"수정 저장 (영화 ID: {review['영화 ID']})", key=f"save_review_{idx}"):
-                    admin_ratings[idx]['rating_value'] = new_rating
-                    admin_ratings[idx]['review_text'] = new_review if new_review else None
-                    save_ratings(admin_ratings)
-                    st.success(f"리뷰가 성공적으로 수정되었습니다. (영화 ID: {review['영화 ID']})")
-
-                # 삭제 버튼
-                if st.button(f"리뷰 삭제 (영화 ID: {review['영화 ID']})", key=f"delete_review_{idx}"):
-                    admin_ratings.pop(idx)
-                    save_ratings(admin_ratings)
-                    st.warning(f"리뷰가 삭제되었습니다. (영화 ID: {review['영화 ID']})")
-    else:
-        st.write("현재 등록된 리뷰가 없습니다.")
+def load_ratings():
+    path = "movie_ratings.csv"
+    if os.path.exists(path):
+        return pd.read_csv(path, encoding='cp949').to_dict('records')
+    return []
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -172,7 +95,7 @@ def main():
     # 영화 검색 및 기타 기능은 그대로 두기
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 영화 검색", "⭐ 추천 영화", "📈 나의 활동", "🔧 사용자 계정 관리", "👑 관리자 보기"])
 
-    # 영화 검색 및 평점 관련 코드 수정
+    # 영화 검색
     with tab1:
         st.header("🎥 영화 검색")
         search_term = st.text_input("🔍 검색", placeholder="영화 제목을 입력하세요...")
@@ -227,18 +150,14 @@ def main():
                 st.markdown("---")
 
                 # 영화에 대한 평점 표시
-                movie_ratings = [
-                    r['rating_value'] for r in ratings if str(r['movie_id']) == str(movie['movie_id'])
-                ]
+                movie_ratings = [r['rating'] for r in ratings if r['movie'] == movie['title']]
                 if movie_ratings:
                     avg_rating = round(sum(movie_ratings) / len(movie_ratings), 2)
                     st.write(f"사이트 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
                 else:
                     st.write("아직 평점이 없습니다.")
 
-                movie_reviews = [
-                    r['review_text'] for r in ratings if str(r['movie_id']) == str(movie['movie_id']) and r.get('review_text') is not None
-                ]
+                movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['title'] and r.get('review') is not None]
                 if movie_reviews:
                     st.write("리뷰:")
                     for review in movie_reviews:
@@ -247,22 +166,21 @@ def main():
                     st.write("아직 리뷰가 없습니다.")
 
                 if st.session_state.user:
-                    if any(r['user_id'] == st.session_state.user and str(r['movie_id']) == str(movie['movie_id']) for r in ratings):
+                    if any(r['username'] == st.session_state.user and r['movie'] == movie['title'] for r in ratings):
                         st.info("이미 이 영화에 평점과 리뷰를 남겼습니다.")
                     else:
                         rating = st.number_input(f"평점을 선택하세요 ({movie['title']})", min_value=0.0, max_value=10.0, step=0.1, format="%.2f")
                         review = st.text_area(f"리뷰를 작성하세요 ({movie['title']})", placeholder="영화를 보고 느낀 점을 적어보세요...")
 
-                        if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['movie_id']}"):
+                        if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
                             ratings.append({
-                                'user_id': st.session_state.user, 
-                                'movie_id': movie['movie_id'], 
-                                'rating_value': round(rating, 2),
-                                'review_text': review if review else None
+                                'username': st.session_state.user, 
+                                'movie': movie['title'], 
+                                'rating': round(rating, 2),
+                                'review': review if review else None
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
-
 
     # 추천 영화
     with tab2:
@@ -336,20 +254,19 @@ def main():
                 st.markdown("---")
 
 
-    # 나의 활동 탭
+    # 나의 활동
     with tab3:
         st.header("📈 나의 활동")
         if st.session_state.user:
-            user_ratings = [r for r in ratings if r['user_id'] == st.session_state.user]
-            if user_ratings:
+            user_reviews = [r for r in ratings if r['username'] == st.session_state.user]
+            if user_reviews:
                 st.write("내가 남긴 리뷰:")
-                for review in user_ratings:
-                    st.write(f"- **영화 ID**: {review['movie_id']}, **평점**: {review['rating_value']}, **리뷰**: {review['review_text']}")
+                for review in user_reviews:
+                    st.write(f"- **영화**: {review['movie']}, **평점**: {review['rating']}, **리뷰**: {review.get('review', '없음')}")
             else:
                 st.write("아직 리뷰를 작성하지 않았습니다.")
         else:
             st.warning("로그인 후 활동을 확인할 수 있습니다.")
-
     # 사용자 계정 관리
     with tab4:
         st.header("🔧 사용자 계정 관리")
@@ -367,7 +284,7 @@ def main():
     with tab5:
         st.header("👑 관리자 보기")
         if st.session_state.role == 'admin':
-            # 회원 정보 표시
+            # 회원 정보
             st.subheader("📋 회원 정보")
             user_info = pd.DataFrame(users)
             st.dataframe(user_info)
@@ -380,59 +297,54 @@ def main():
             if admin_ratings:
                 # 사용자 리뷰를 DataFrame으로 변환
                 reviews_df = pd.DataFrame(admin_ratings)
-                reviews_df = reviews_df[['user_id', 'movie_id', 'rating_value', 'review_text']]  # 필요한 열만 선택
+                reviews_df = reviews_df[['username', 'movie', 'rating', 'review']]  # 필요한 열만 선택
 
                 reviews_df = reviews_df.rename(columns={
-                    'user_id': '사용자명',
-                    'movie_id': '영화 ID',
-                    'rating_value': '평점',
-                    'review_text': '리뷰'
+                    'username': '사용자명',
+                    'movie': '영화 제목',
+                    'rating': '평점',
+                    'review': '리뷰'
                 })
 
                 # 데이터 출력
                 st.write("사용자 리뷰를 한눈에 확인하세요:")
-                st.dataframe(reviews_df[['사용자명', '영화 ID', '평점', '리뷰']])
+                st.dataframe(reviews_df[['사용자명', '영화 제목', '평점', '리뷰']])
 
                 st.markdown("---")
+                # 개별 리뷰 수정
                 st.subheader("🔧 리뷰 수정 및 삭제")
-                # 개별 리뷰 수정 및 삭제
-                for idx, review in reviews_df.iterrows():
-                    with st.expander(f"{review['사용자명']} - 영화 ID: {review['영화 ID']}"):
-                        # 현재 평점과 리뷰 확인
-                        try:
-                            st.write(f"**현재 평점**: {review['평점']}")
-                            st.write(f"**현재 리뷰**: {review['리뷰'] if pd.notna(review['리뷰']) else '없음'}")
-                        except KeyError as e:
-                            st.error(f"Missing key in review data: {e}")
-                            continue
+                for idx, r in reviews_df.iterrows():
+                    with st.expander(f"{r['사용자명']} - {r['영화 제목']}"):
+                        # 수정할 데이터 표시
+                        st.write(f"**영화 제목**: {r['영화 제목']}")
+                        st.write(f"**현재 평점**: {r['평점']}")
+                        st.write(f"**현재 리뷰**: {r['리뷰'] if r['리뷰'] else '없음'}")
 
                         # 평점 및 리뷰 수정 입력
                         new_rating = st.number_input(
-                            f"새 평점 (영화 ID: {review['영화 ID']})",
-                            min_value=0.0,
-                            max_value=10.0,
-                            step=0.1,
-                            value=review['평점'],
-                            key=f"new_rating_{idx}"
+                            f"새 평점 ({r['영화 제목']})", 
+                            min_value=0.0, 
+                            max_value=10.0, 
+                            step=0.1, 
+                            value=float(admin_ratings[idx]['rating'])
                         )
                         new_review = st.text_area(
-                            f"새 리뷰 (영화 ID: {review['영화 ID']})",
-                            value=review['리뷰'] if pd.notna(review['리뷰']) else "",
-                            key=f"new_review_{idx}"
+                            f"새 리뷰 ({r['영화 제목']})", 
+                            value=admin_ratings[idx]['review'] if admin_ratings[idx].get('review') else ""
                         )
 
                         # 수정 저장 버튼
-                        if st.button(f"수정 저장 (영화 ID: {review['영화 ID']})", key=f"save_review_{idx}"):
-                            admin_ratings[idx]['rating_value'] = new_rating
-                            admin_ratings[idx]['review_text'] = new_review if new_review else None
+                        if st.button(f"리뷰 수정 저장 ({r['영화 제목']})", key=f"save-edit-{idx}"):
+                            admin_ratings[idx]['rating'] = new_rating
+                            admin_ratings[idx]['review'] = new_review if new_review else None
                             save_ratings(admin_ratings)
-                            st.success(f"리뷰가 성공적으로 수정되었습니다. (영화 ID: {review['영화 ID']})")
+                            st.success("리뷰가 성공적으로 수정되었습니다.")
 
                         # 삭제 버튼
-                        if st.button(f"리뷰 삭제 (영화 ID: {review['영화 ID']})", key=f"delete_review_{idx}"):
-                            admin_ratings.pop(idx)  # 해당 리뷰 제거
+                        if st.button(f"리뷰 삭제 ({r['영화 제목']})", key=f"delete-review-{idx}"):
+                            admin_ratings.pop(idx)  # 리뷰 제거
                             save_ratings(admin_ratings)
-                            st.warning(f"리뷰가 삭제되었습니다. (영화 ID: {review['영화 ID']})")
+                            st.warning(f"{r['사용자명']}의 리뷰가 삭제되었습니다.")
             else:
                 st.write("현재 등록된 리뷰가 없습니다.")
         else:
