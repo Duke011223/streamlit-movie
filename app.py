@@ -231,22 +231,23 @@ def main():
                         if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
                             ratings.append({
                                 'user_id': st.session_state.user,
-                                'movie_id': movie['movie_id'],
+                                 'movie_id': movie['movie_id'],
                                 'rating_value': round(rating, 2),
                                 'review_text': review if review else None
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
 
-                            # GitHub 업데이트
+                            # GitHub 업데이트 및 디버깅
                             try:
                                 save_ratings_to_github("movie_ratings.csv", RATINGS_FILE_PATH)
                                 st.success("GitHub에 업데이트가 성공적으로 반영되었습니다.")
                             except requests.exceptions.RequestException as e:
                                 st.error(f"GitHub 업데이트 실패: {e}")
+                                print(f"에러 발생: {e}")
                             except Exception as e:
                                 st.error(f"예기치 못한 오류 발생: {e}")
-
+                                print(f"예기치 못한 오류 발생: {e}")
 
     # 추천 영화
     with tab2:
