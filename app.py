@@ -145,7 +145,7 @@ def main():
         genre_filter = st.selectbox("🎭 장르 필터", options=["모든 장르"] + df['genre'].unique().tolist())
 
         # 필터링 및 페이지네이션
-        filtered_df = df[df['movie'].str.contains(search_term, case=False)]
+        filtered_df = df[df['title'].str.contains(search_term, case=False)]
         if genre_filter != "모든 장르":
             filtered_df = filtered_df[filtered_df['genre'] == genre_filter]
 
