@@ -172,7 +172,7 @@ def main():
     # 영화 검색 및 기타 기능은 그대로 두기
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 영화 검색", "⭐ 추천 영화", "📈 나의 활동", "🔧 사용자 계정 관리", "👑 관리자 보기"])
 
-    # 영화 검색
+    # 영화 검색 및 평점 관련 코드 수정
     with tab1:
         st.header("🎥 영화 검색")
         search_term = st.text_input("🔍 검색", placeholder="영화 제목을 입력하세요...")
@@ -227,14 +227,18 @@ def main():
                 st.markdown("---")
 
                 # 영화에 대한 평점 표시
-                movie_ratings = [r['rating'] for r in ratings if r['movie'] == movie['title']]
+                movie_ratings = [
+                    r['rating_value'] for r in ratings if str(r['movie_id']) == str(movie['movie_id'])
+                ]
                 if movie_ratings:
                     avg_rating = round(sum(movie_ratings) / len(movie_ratings), 2)
                     st.write(f"사이트 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
                 else:
                     st.write("아직 평점이 없습니다.")
 
-                movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['title'] and r.get('review') is not None]
+                movie_reviews = [
+                    r['review_text'] for r in ratings if str(r['movie_id']) == str(movie['movie_id']) and r.get('review_text') is not None
+                ]
                 if movie_reviews:
                     st.write("리뷰:")
                     for review in movie_reviews:
@@ -243,21 +247,22 @@ def main():
                     st.write("아직 리뷰가 없습니다.")
 
                 if st.session_state.user:
-                    if any(r['username'] == st.session_state.user and r['movie'] == movie['title'] for r in ratings):
+                    if any(r['user_id'] == st.session_state.user and str(r['movie_id']) == str(movie['movie_id']) for r in ratings):
                         st.info("이미 이 영화에 평점과 리뷰를 남겼습니다.")
                     else:
                         rating = st.number_input(f"평점을 선택하세요 ({movie['title']})", min_value=0.0, max_value=10.0, step=0.1, format="%.2f")
                         review = st.text_area(f"리뷰를 작성하세요 ({movie['title']})", placeholder="영화를 보고 느낀 점을 적어보세요...")
 
-                        if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
+                        if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['movie_id']}"):
                             ratings.append({
-                                'username': st.session_state.user, 
-                                'movie': movie['title'], 
-                                'rating': round(rating, 2),
-                                'review': review if review else None
+                                'user_id': st.session_state.user, 
+                                'movie_id': movie['movie_id'], 
+                                'rating_value': round(rating, 2),
+                                'review_text': review if review else None
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
+
 
     # 추천 영화
     with tab2:
