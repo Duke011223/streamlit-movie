@@ -84,9 +84,9 @@ def main():
 
     # 새로고침 버튼을 눌렀을 때 데이터 새로 고침
     if st.button("새로고침"):
-        # 캐시된 데이터를 무효화하고 새 데이터를 로드
         st.cache_data.clear()  # 캐시를 삭제
         df = load_data()  # 최신 데이터 로드
+        ratings = load_ratings()  # 최신 평점 데이터 로드
         st.success("데이터가 새로 고침되었습니다.")
     else:
         df = load_data()  # 캐시된 데이터 사용
@@ -209,7 +209,7 @@ def main():
                     st.write("아직 리뷰가 없습니다.")
 
                 if st.session_state.user:
-                    if any(r['username'] == st.session_state.user and r['movie'] == movie['title'] for r in ratings):
+                    if any(r['user_id'] == st.session_state.user and r['movie_id'] == movie['movie_id'] for r in ratings):
                         st.info("이미 이 영화에 평점과 리뷰를 남겼습니다.")
                     else:
                         rating = st.number_input(f"평점을 선택하세요 ({movie['title']})", min_value=0.0, max_value=10.0, step=0.1, format="%.2f")
@@ -217,15 +217,20 @@ def main():
 
                         if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
                             ratings.append({
-                                'user_id': st.session_state.user,  # username → user_id로 변경
-                                'movie_id': movie['movie_id'],    # movie → movie_id로 변경
-                                'rating_value': round(rating, 2), # rating → rating_value로 변경
-                                'review_text': review if review else None 
+                                'user_id': st.session_state.user,
+                                'movie_id': movie['movie_id'],
+                                'rating_value': round(rating, 2),
+                                'review_text': review if review else None
                             })
                             save_ratings(ratings)
                             st.success("평점과 리뷰가 저장되었습니다.")
-                            save_ratings_to_github("movie_ratings.csv", RATINGS_FILE_PATH)  # GitHub 파일 업데이트
-                            st.success("평점과 리뷰가 저장되었으며, GitHub에도 업데이트되었습니다.")
+    
+                            # GitHub 업데이트
+                            try:
+                                save_ratings_to_github("movie_ratings.csv", RATINGS_FILE_PATH)
+                                st.success("GitHub에 업데이트가 성공적으로 반영되었습니다.")
+                            except Exception as e:
+                                st.error(f"GitHub 업데이트 중 오류 발생: {e}")
 
     # 추천 영화
     with tab2:
@@ -246,22 +251,22 @@ def main():
             movie_rated_users = {}
 
             for r in ratings:
-                movie = r['movie']
-                movie_review_counts[movie] = movie_review_counts.get(movie, 0) + (1 if r.get('review') else 0)
-                movie_rating_sums[movie] = movie_rating_sums.get(movie, 0) + r['rating']
-                movie_rated_users[movie] = movie_rated_users.get(movie, 0) + 1
+                movie_id = r['movie_id']
+                movie_review_counts[movie_id] = movie_review_counts.get(movie_id, 0) + (1 if r.get('review_text') else 0)
+                movie_rating_sums[movie_id] = movie_rating_sums.get(movie_id, 0) + r['rating_value']
+                movie_rated_users[movie_id] = movie_rated_users.get(movie_id, 0) + 1
 
             # 영화 데이터와 리뷰 데이터 병합
             df['review_count'] = df['movie_id'].map(movie_review_counts).fillna(0).astype(int)
-            df['total_rating'] = df['title'].map(movie_rating_sums).fillna(0.0)
-            df['user_count'] = df['title'].map(movie_rated_users).fillna(0).astype(int)
+            df['total_rating'] = df['movie_id'].map(movie_rating_sums).fillna(0.0)
+            df['user_count'] = df['movie_id'].map(movie_rated_users).fillna(0).astype(int)
             df['avg_star_rating'] = (df['total_rating'] / df['user_count']).fillna(0.0)
 
             # 추천 정렬 기준에 따라 정렬
             if recommendation_type == "가장 많은 리뷰 수":
                 recommended_movies = df.sort_values(by='review_count', ascending=False)
             elif recommendation_type == "가장 높은 평점":
-                recommended_movies = df.sort_values(by='rating', ascending=False)
+                recommended_movies = df.sort_values(by='avg_star_rating', ascending=False)
             elif recommendation_type == "사용자 별 점 평균 순":
                 recommended_movies = df.sort_values(by='avg_star_rating', ascending=False)
 
@@ -287,8 +292,8 @@ def main():
 
                 # 사용자 리뷰 출력
                 movie_reviews = [
-                    (r['username'], r['review']) for r in ratings 
-                    if r['movie'] == movie['movie'] and r.get('review') is not None
+                    r['review_text'] for r in ratings
+                    if r['movie_id'] == movie['movie_id'] and r.get('review_text')
                 ]
                 if movie_reviews:
                     st.write("리뷰:")
@@ -303,11 +308,12 @@ def main():
     with tab3:
         st.header("📈 나의 활동")
         if st.session_state.user:
-            user_reviews = [r for r in ratings if r['username'] == st.session_state.user]
+            user_reviews = [r for r in ratings if r['user_id'] == st.session_state.user]
             if user_reviews:
                 st.write("내가 남긴 리뷰:")
                 for review in user_reviews:
-                    st.write(f"- **영화**: {review['movie']}, **평점**: {review['rating']}, **리뷰**: {review.get('review', '없음')}")
+                    st.write(f"- **영화 ID**: {review['movie_id']}, **평점**: {review['rating_value']}, **리뷰**: {review.get('review_text', '없음')}")
+
             else:
                 st.write("아직 리뷰를 작성하지 않았습니다.")
         else:
@@ -342,13 +348,13 @@ def main():
             if admin_ratings:
                 # 사용자 리뷰를 DataFrame으로 변환
                 reviews_df = pd.DataFrame(admin_ratings)
-                reviews_df = reviews_df[['username', 'movie', 'rating', 'review']]  # 필요한 열만 선택
+                reviews_df = reviews_df[['user_id', 'movie_id', 'rating_value', 'review_text']]
 
                 reviews_df = reviews_df.rename(columns={
-                    'username': '사용자명',
-                    'movie': '영화 제목',
-                    'rating': '평점',
-                    'review': '리뷰'
+                    'user_id': '사용자명',
+                    'movie_id': '영화 ID',
+                    'rating_value': '평점',
+                    'review_text': '리뷰'
                 })
 
                 # 데이터 출력
@@ -380,8 +386,8 @@ def main():
 
                         # 수정 저장 버튼
                         if st.button(f"리뷰 수정 저장 ({r['영화 제목']})", key=f"save-edit-{idx}"):
-                            admin_ratings[idx]['rating'] = new_rating
-                            admin_ratings[idx]['review'] = new_review if new_review else None
+                            admin_ratings[idx]['rating_value'] = new_rating
+                            admin_ratings[idx]['review_text'] = new_review if new_review else None
                             save_ratings(admin_ratings)
                             st.success("리뷰가 성공적으로 수정되었습니다.")
 
