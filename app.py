@@ -341,8 +341,13 @@ def main():
                 # 개별 리뷰 수정 및 삭제
                 for idx, review in reviews_df.iterrows():
                     with st.expander(f"{review['사용자명']} - 영화 ID: {review['영화 ID']}"):
-                        st.write(f"**현재 평점**: {review['평점']}")
-                        st.write(f"**현재 리뷰**: {review['리뷰'] if pd.notna(review['리뷰']) else '없음'}")
+                        # 현재 평점과 리뷰 확인
+                        try:
+                            st.write(f"**현재 평점**: {review['평점']}")
+                            st.write(f"**현재 리뷰**: {review['리뷰'] if pd.notna(review['리뷰']) else '없음'}")
+                        except KeyError as e:
+                            st.error(f"Missing key in review data: {e}")
+                            continue
 
                         # 평점 및 리뷰 수정 입력
                         new_rating = st.number_input(
