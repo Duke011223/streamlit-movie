@@ -145,7 +145,10 @@ def main():
         genre_filter = st.selectbox("🎭 장르 필터", options=["모든 장르"] + df['genre'].unique().tolist())
 
         # 필터링 및 페이지네이션
-        filtered_df = df[df['title'].str.contains(search_term, case=False)]
+        if search_term.strip():
+            filtered_df = df[df['title'].str.contains(search_term, case=False)]
+        else:
+            filtered_df = df
         if genre_filter != "모든 장르":
             filtered_df = filtered_df[filtered_df['genre'] == genre_filter]
 
@@ -200,13 +203,18 @@ def main():
                 else:
                     st.write("아직 평점이 없습니다.")
 
-                movie_reviews = [r['review_text'] for r in ratings if r['movie_id'] == movie['movie_id'] and r.get('review_text') is not None]
+                movie_reviews = [
+                    (r['user_id'], r['review_text']) for r in ratings
+                    if r['movie_id'] == movie['movie_id'] and r.get('review_text')
+                ]
+
                 if movie_reviews:
-                    st.write("리뷰:")
                     for review in movie_reviews:
-                        st.write(f"- {review}")
-                else:
-                    st.write("아직 리뷰가 없습니다.")
+                        if isinstance(review, tuple) and len(review) == 2:
+                            username, text = review
+                            st.write(f"- **{username}**: {text}")
+                        else:
+                            st.write("아직 리뷰가 없습니다.")
 
                 if st.session_state.user:
                     if any(r['user_id'] == st.session_state.user and r['movie_id'] == movie['movie_id'] for r in ratings):
@@ -228,9 +236,10 @@ def main():
                             # GitHub 업데이트
                             try:
                                 save_ratings_to_github("movie_ratings.csv", RATINGS_FILE_PATH)
-                                st.success("GitHub에 업데이트가 성공적으로 반영되었습니다.")
+                            except requests.exceptions.RequestException as e:
+                                st.error(f"GitHub 업데이트 실패: {e}")
                             except Exception as e:
-                                st.error(f"GitHub 업데이트 중 오류 발생: {e}")
+                                st.error(f"예기치 못한 오류 발생: {e}")
 
     # 추천 영화
     with tab2:
@@ -359,7 +368,7 @@ def main():
 
                 # 데이터 출력
                 st.write("사용자 리뷰를 한눈에 확인하세요:")
-                st.dataframe(reviews_df[['사용자명', '영화 제목', '평점', '리뷰']])
+                st.dataframe(reviews_df[['사용자명', '영화 ID', '평점', '리뷰']].sort_values(by='영화 ID'))
 
                 st.markdown("---")
                 # 개별 리뷰 수정
@@ -372,13 +381,12 @@ def main():
                         st.write(f"**현재 리뷰**: {r['리뷰'] if r['리뷰'] else '없음'}")
 
                         # 평점 및 리뷰 수정 입력
-                        new_rating = st.number_input(
-                            f"새 평점 ({r['영화 제목']})", 
-                            min_value=0.0, 
-                            max_value=10.0, 
-                            step=0.1, 
-                            value=float(admin_ratings[idx]['rating'])
-                        )
+                        admin_ratings[idx] = {
+                            'user_id': r['사용자명'],
+                            'movie_id': r['영화 ID'],
+                            'rating_value': new_rating,
+                            'review_text': r['리뷰']
+                        }
                         new_review = st.text_area(
                             f"새 리뷰 ({r['영화 제목']})", 
                             value=admin_ratings[idx]['review'] if admin_ratings[idx].get('review') else ""
