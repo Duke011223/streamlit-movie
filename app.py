@@ -87,9 +87,16 @@ def main():
         st.cache_data.clear()
         df = load_data()
         ratings = load_ratings()
-        st.success("데이터가 새로 고침되었습니다.")
+        save_ratings(ratings)  # 리뷰 정보를 저장
+        try:
+           save_ratings_to_github("movie_ratings.csv", RATINGS_FILE_PATH)
+           st.success("데이터가 새로 고침되었습니다. GitHub에도 업데이트되었습니다.")
+        except requests.exceptions.RequestException as e:
+            st.error(f"GitHub 업데이트 실패: {e}")
+        except Exception as e:
+            st.error(f"예기치 못한 오류 발생: {e}")
     else:
-        df = load_data()
+         df = load_data()
 
     users = load_users()
     ratings = load_ratings()
