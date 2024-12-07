@@ -12,7 +12,7 @@ st.write("GitHub Token:", GITHUB_TOKEN)
 
 # GitHub에서 movie_users.csv 읽기
 def fetch_user_csv_from_github():
-    url = f"https://github.com/Duke011223/streamlit-movie/blob/main/movie_users.csv"
+    url = f"https://api.github.com/repos/Duke011223/streamlit-movie/contents/movie_users.csv"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     response = requests.get(url, headers=headers)
 
@@ -26,7 +26,7 @@ def fetch_user_csv_from_github():
 
 # GitHub에 movie_users.csv 저장
 def update_user_csv_to_github(df, sha):
-    url = f"https://github.com/Duke011223/streamlit-movie/blob/main/movie_users.csv"
+    url = f"https://api.github.com/repos/Duke011223/streamlit-movie/contents/movie_users.csv"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     content = df.to_csv(index=False, encoding="utf-8")
     data = {
@@ -48,7 +48,7 @@ def load_data():
         df.columns = df.columns.str.strip().str.lower()
         return df
     except Exception as e:
-        st.error(f"데이터 로드 오류: {e}")
+        st.error(f"데이터 로드 오류: {e}")amlit-movie/blob/main/movie_users.csv"
         return pd.DataFrame()
 
 def save_users(users):
