@@ -5,7 +5,6 @@ import os
 import io
 import requests
 import base64
-import chardet
 
 st.set_page_config(page_title="영화 추천 시스템", layout="wide")
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
@@ -102,18 +101,6 @@ def load_ratings():
 
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
-
-def detect_encoding(file_path):
-    with open(file_path, 'rb') as f:
-        result = chardet.detect(f.read())
-        return result['encoding']
-
-def load_ratings():
-    path = "movie_ratings.csv"
-    if os.path.exists(path):
-        encoding = detect_encoding(path)
-        return pd.read_csv(path, encoding=encoding).to_dict('records')
-    return []
 
 def main():
     # 전역 변수 설정
