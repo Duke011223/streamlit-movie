@@ -91,12 +91,12 @@ def load_users():
     return []
 
 def save_ratings(ratings):
-    pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding='cp949')
+    pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding="utf-8")
 
 def load_ratings():
     path = "movie_ratings.csv"
     if os.path.exists(path):
-        return pd.read_csv(path, encoding='cp949').to_dict('records')
+        return pd.read_csv(path, encoding="utf-8").to_dict("records")
     return []
 
 def hash_password(password):
