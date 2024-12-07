@@ -24,21 +24,21 @@ def fetch_user_csv_from_github():
         st.error(f"GitHub에서 데이터를 가져올 수 없습니다. 상태 코드: {response.status_code}")
         return pd.DataFrame(), None
 
-# GitHub에 movie_users.csv 저장
-def update_user_csv_to_github(df, sha):
-    url = f"https://api.github.com/repos/Duke011223/streamlit-movie/contents/movie_users.csv"
+def update_rating_csv_to_github(df, sha):
+    url = f"https://api.github.com/repos/Duke011223/streamlit-movie/contents/movie_ratings.csv"
     headers = {"Authorization": f"token {GITHUB_TOKEN}"}
     content = df.to_csv(index=False, encoding="utf-8")
     data = {
-        "message": "Update movie_users.csv",
+        "message": "Update movie_ratings.csv",
         "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
         "sha": sha,
     }
     response = requests.put(url, json=data, headers=headers)
     if response.status_code == 200:
-        st.success("GitHub에 사용자 정보가 성공적으로 업데이트되었습니다.")
+        st.success("GitHub에 movie_ratings.csv가 성공적으로 업데이트되었습니다.")
     else:
         st.error(f"GitHub 업데이트 실패. 상태 코드: {response.status_code}")
+
         
 # GitHub에서 movie_ratings.csv 읽기
 def fetch_rating_csv_from_github():
@@ -91,7 +91,7 @@ def load_users():
     return []
 
 def save_ratings(ratings):
-    pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding='cp949')
+    pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding="utf-8")
 
 def load_ratings():
     path = "movie_ratings.csv"
