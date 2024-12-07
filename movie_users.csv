@@ -1,5 +1,6 @@
-username,password,role
-leeduke01,a302133d9c696078eda871a9394a05311b0854b16065c2d5aa4b7cabddb041c9,admin
-vivikang,c7a6d1e89e02d9179dd4056ac2d3d8cbe888d760aa64abba798c79c7d8d2aa56,admin
-qwer,f6f2ea8f45d8a057c9566a33f99474da2e5c6a6604d736121650e2730c6fb0a3,user
-zxcv,7020e57625b6a6695ffd51ed494fbfc56c699eaceca4e77bf7ea590c7ebf3879,user
+username,password,role,movie_id,title,distributor,director,actor,genre,release_date,running_time,rating,running_state,poster_url
+leeduke01,a302133d9c696078eda871a9394a05311b0854b16065c2d5aa4b7cabddb041c9,admin,,,,,,,,,,,
+vivikang,c7a6d1e89e02d9179dd4056ac2d3d8cbe888d760aa64abba798c79c7d8d2aa56,admin,,,,,,,,,,,
+qwer,f6f2ea8f45d8a057c9566a33f99474da2e5c6a6604d736121650e2730c6fb0a3,user,,,,,,,,,,,
+zxcv,7020e57625b6a6695ffd51ed494fbfc56c699eaceca4e77bf7ea590c7ebf3879,user,,,,,,,,,,,
+,,,111111111,qwerqwerqwerqwerqwerqwerq,asdfasdfasdfasdf,zxcvzxcvzxcvzxcv,qwerqwerqwerqwer,asdasdfasdf,2024-12-08,666,10.0,Y,qwerqwerqwerqwerqwerqwerq.webp
