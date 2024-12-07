@@ -39,6 +39,37 @@ def update_user_csv_to_github(df, sha):
         st.success("GitHub에 사용자 정보가 성공적으로 업데이트되었습니다.")
     else:
         st.error(f"GitHub 업데이트 실패. 상태 코드: {response.status_code}")
+        
+# GitHub에서 movie_ratings.csv 읽기
+def fetch_rating_csv_from_github():
+    url = f"https://api.github.com/repos/Duke011223/streamlit-movie/contents/movie_ratings.csv"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        content = base64.b64decode(response.json()["content"]).decode("utf-8")
+        sha = response.json()["sha"]
+        return pd.read_csv(io.StringIO(content), encoding="utf-8"), sha
+    else:
+        st.error(f"GitHub에서 movie_ratings.csv를 가져올 수 없습니다. 상태 코드: {response.status_code}")
+        return pd.DataFrame(), None
+
+# GitHub에 movie_ratings.csv 저장
+def update_rating_csv_to_github(df, sha):
+    url = f"https://api.github.com/repos/Duke011223/streamlit-movie/contents/movie_ratings.csv"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    content = df.to_csv(index=False, encoding="utf-8")
+    data = {
+        "message": "Update movie_ratings.csv",
+        "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
+        "sha": sha,
+    }
+    response = requests.put(url, json=data, headers=headers)
+    if response.status_code == 200:
+        st.success("GitHub에 movie_ratings.csv가 성공적으로 업데이트되었습니다.")
+    else:
+        st.error(f"GitHub 업데이트 실패. 상태 코드: {response.status_code}")
+        
 
 # CSV 파일 로드
 @st.cache_data
@@ -76,10 +107,16 @@ def main():
     
     st.title("🎬 영화 추천 및 검색 시스템")
     
-    # GitHub에서 사용자 정보 로드
+     # GitHub에서 사용자 정보 및 평점 정보 로드
     user_df, user_sha = fetch_user_csv_from_github()
     if user_df.empty:
         user_df = pd.DataFrame(columns=["username", "password", "role"])
+    
+    ratings_df, ratings_sha = fetch_rating_csv_from_github()  # 평점 데이터 로드
+    if ratings_df.empty:
+        ratings_df = pd.DataFrame(columns=["username", "movie", "rating", "review"])
+    else:
+        ratings = ratings_df.to_dict('records')
     
     # 새로고침 버튼을 눌렀을 때 데이터 새로 고침
     if st.button("새로고침"):
@@ -228,7 +265,7 @@ def main():
                                 'rating': round(rating, 2),
                                 'review': review if review else None
                             })
-                            save_ratings(ratings)
+                            save_ratings_to_github(ratings)  # GitHub에 업데이트
                             st.success("평점과 리뷰가 저장되었습니다.")
 
     # 추천 영화
