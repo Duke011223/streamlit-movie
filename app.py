@@ -69,10 +69,6 @@ def update_rating_csv_to_github(df, sha):
         st.success("GitHub에 movie_ratings.csv가 성공적으로 업데이트되었습니다.")
     else:
         st.error(f"GitHub 업데이트 실패. 상태 코드: {response.status_code}")
-        
-def save_ratings_to_github(ratings):
-    ratings_df = pd.DataFrame(ratings)
-    update_rating_csv_to_github(ratings_df, ratings_sha)
 
 # CSV 파일 로드
 @st.cache_data
@@ -285,17 +281,6 @@ def main():
                             ratings_df = pd.DataFrame(ratings)
                             update_rating_csv_to_github(ratings_df, ratings_sha)
                             st.success("평점과 리뷰가 저장되었습니다.")
-
-                # 평점 업데이트 테스트 버튼 추가
-                if st.session_state.user and st.button(f"'{movie['title']}' 평점 업데이트 테스트", key=f"test-{movie['title']}"):
-                    ratings.append({
-                        'username': "test_user",
-                        'movie': movie['title'],
-                        'rating': 9.0,
-                        'review': "테스트 리뷰"
-                    })
-                    save_ratings_to_github(ratings)
-                    st.success(f"테스트 평점이 '{movie['title']}'에 추가되었습니다.")
 
 
     # 추천 영화
