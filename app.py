@@ -70,6 +70,9 @@ def update_rating_csv_to_github(df, sha):
     else:
         st.error(f"GitHub 업데이트 실패. 상태 코드: {response.status_code}")
         
+def save_ratings_to_github(ratings):
+    ratings_df = pd.DataFrame(ratings)
+    update_rating_csv_to_github(ratings_df, ratings_sha)
 
 # CSV 파일 로드
 @st.cache_data
@@ -279,7 +282,8 @@ def main():
                                 'rating': round(rating, 2),
                                 'review': review if review else None
                             })
-                            save_ratings_to_github(ratings)  # GitHub에 업데이트
+                            ratings_df = pd.DataFrame(ratings)
+                            update_rating_csv_to_github(ratings_df, ratings_sha)
                             st.success("평점과 리뷰가 저장되었습니다.")
 
                 # 평점 업데이트 테스트 버튼 추가
