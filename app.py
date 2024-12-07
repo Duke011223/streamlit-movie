@@ -392,7 +392,8 @@ def main():
                     'rating': 8.5,
                     'review': "테스트 리뷰"
                 })
-                save_ratings_to_github(ratings)
+                ratings_df = pd.DataFrame(ratings)  # ratings 리스트를 DataFrame으로 변환
+                update_rating_csv_to_github(ratings_df, ratings_sha)  # GitHub에 저장
                 st.success("평점 데이터가 GitHub에 성공적으로 저장되었습니다.")
             else:
                 st.warning("관리자만 접근 가능합니다.")
