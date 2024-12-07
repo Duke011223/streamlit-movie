@@ -70,18 +70,16 @@ def update_rating_csv_to_github(df, sha):
     else:
         st.error(f"GitHub 업데이트 실패. 상태 코드: {response.status_code}")
 
+# CSV 파일 로드
 @st.cache_data
 def load_data():
     try:
-        df = read_and_convert_file("movie_data.csv")
-        df.columns = df.iloc[0]  # 첫 번째 행을 컬럼명으로 사용
-        df = df[1:]  # 첫 번째 행 제거
+        df = pd.read_csv("movie_data.csv", encoding='utf-8')  # 'cp949'를 'utf-8'로 변경
         df.columns = df.columns.str.strip().str.lower()
         return df
     except Exception as e:
         st.error(f"데이터 로드 오류: {e}")
         return pd.DataFrame()
-
 
 def save_users(users):
     pd.DataFrame(users).to_csv("movie_users.csv", index=False, encoding='cp949')
@@ -89,16 +87,8 @@ def save_users(users):
 def load_users():
     path = "movie_users.csv"
     if os.path.exists(path):
-        try:
-            df = read_and_convert_file(path)
-            df.columns = df.iloc[0]  # 첫 번째 행을 컬럼명으로 사용
-            df = df[1:]  # 첫 번째 행 제거
-            return df.to_dict('records')
-        except Exception as e:
-            st.error(f"파일 로드 오류: {e}")
-            return []
+        return pd.read_csv(path, encoding='cp949').to_dict('records')
     return []
-
 
 def save_ratings(ratings):
     pd.DataFrame(ratings).to_csv("movie_ratings.csv", index=False, encoding='cp949')
@@ -106,14 +96,7 @@ def save_ratings(ratings):
 def load_ratings():
     path = "movie_ratings.csv"
     if os.path.exists(path):
-        try:
-            df = read_and_convert_file(path)
-            df.columns = df.iloc[0]  # 첫 번째 행을 컬럼명으로 사용
-            df = df[1:]  # 첫 번째 행 제거
-            return df.to_dict('records')
-        except Exception as e:
-            st.error(f"파일 로드 오류: {e}")
-            return []
+        return pd.read_csv(path, encoding='cp949').to_dict('records')
     return []
 
 def hash_password(password):
