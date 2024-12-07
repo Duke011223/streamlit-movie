@@ -6,8 +6,39 @@ import io
 import requests
 import base64
 
+st.set_page_config(page_title="영화 추천 시스템", layout="wide")
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
 st.write("GitHub Token:", GITHUB_TOKEN)
+
+# GitHub에서 movie_users.csv 읽기
+def fetch_user_csv_from_github():
+    url = f"https://github.com/Duke011223/streamlit-movie/blob/main/movie_users.csv"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        content = base64.b64decode(response.json()["content"]).decode("utf-8")
+        sha = response.json()["sha"]
+        return pd.read_csv(io.StringIO(content), encoding="utf-8"), sha
+    else:
+        st.error(f"GitHub에서 데이터를 가져올 수 없습니다. 상태 코드: {response.status_code}")
+        return pd.DataFrame(), None
+
+# GitHub에 movie_users.csv 저장
+def update_user_csv_to_github(df, sha):
+    url = f"https://github.com/Duke011223/streamlit-movie/blob/main/movie_users.csv"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    content = df.to_csv(index=False, encoding="utf-8")
+    data = {
+        "message": "Update movie_users.csv",
+        "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
+        "sha": sha,
+    }
+    response = requests.put(url, json=data, headers=headers)
+    if response.status_code == 200:
+        st.success("GitHub에 사용자 정보가 성공적으로 업데이트되었습니다.")
+    else:
+        st.error(f"GitHub 업데이트 실패. 상태 코드: {response.status_code}")
 
 # CSV 파일 로드
 @st.cache_data
@@ -42,9 +73,14 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def main():
-    st.set_page_config(page_title="영화 추천 시스템", layout="wide")
+    
     st.title("🎬 영화 추천 및 검색 시스템")
-
+    
+    # GitHub에서 사용자 정보 로드
+    user_df, user_sha = fetch_user_csv_from_github()
+    if user_df.empty:
+        user_df = pd.DataFrame(columns=["username", "password", "role"])
+    
     # 새로고침 버튼을 눌렀을 때 데이터 새로 고침
     if st.button("새로고침"):
         # 캐시된 데이터를 무효화하고 새 데이터를 로드
@@ -61,7 +97,7 @@ def main():
         st.session_state.user = None
         st.session_state.role = None
 
-    poster_folder = 'poster_url'  # 포스터가 저장된 폴더 경로
+    poster_folder = 'poster_file'  # 포스터가 저장된 폴더 경로
 
     # 사이드바 사용자 인증
     with st.sidebar:
@@ -92,7 +128,14 @@ def main():
                     if any(u['username'] == new_username for u in users):
                         st.error("이미 존재하는 사용자명입니다.")
                     else:
+                        new_user = {
+                            "username": new_username,
+                            "password": hash_password(new_password),
+                            "role": "user",
+                         }
                         users.append({'username': new_username, 'password': hash_password(new_password), 'role': 'user'})
+                        user_df = pd.concat([user_df, pd.DataFrame([new_user])], ignore_index=True)
+                        update_user_csv_to_github(user_df, user_sha)
                         save_users(users)
                         st.success("회원가입 성공! 이제 로그인할 수 있습니다.")
 
