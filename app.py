@@ -1,44 +1,13 @@
-from github import Github
 import streamlit as st
 import pandas as pd
 import hashlib
 import os
+import io
+import requests
 import base64
 
-# GitHub 설정
-GITHUB_TOKEN = "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"
-REPO_OWNER = "Duke011223"
-REPO_NAME = "streamlit-movie"
-FILE_PATH = "movie_ratings.csv"
-
-def save_rating_to_github(new_rating):
-    try:
-        # GitHub 연결
-        g = Github(GITHUB_TOKEN)
-        repo = g.get_repo(f"{REPO_OWNER}/{REPO_NAME}")
-
-        # 기존 데이터 가져오기
-        try:
-            contents = repo.get_contents(FILE_PATH)
-            existing_data = pd.read_csv(contents.decoded_content.decode('utf-8'))
-        except Exception:
-            # 파일이 없으면 새로 생성
-            existing_data = pd.DataFrame(columns=['username', 'movie', 'rating', 'review'])
-
-        # 새로운 데이터 추가 및 중복 제거
-        updated_data = pd.concat([existing_data, pd.DataFrame([new_rating])]).drop_duplicates()
-
-        # 업데이트된 데이터 저장
-        repo.update_file(
-            path=FILE_PATH,
-            message="Add new review",
-            content=updated_data.to_csv(index=False, encoding='utf-8'),
-            sha=contents.sha if 'contents' in locals() else None
-        )
-        st.success("리뷰가 성공적으로 GitHub에 저장되었습니다!")
-    except Exception as e:
-        st.error(f"GitHub에 저장하는 중 오류가 발생했습니다: {e}")
-        print(f"Error: {e}")  # 디버깅 로그 출력
+GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
+st.write("GitHub Token:", GITHUB_TOKEN)
 
 # CSV 파일 로드
 @st.cache_data
@@ -216,7 +185,8 @@ def main():
                                 'rating': round(rating, 2),
                                 'review': review if review else None
                             })
-                            save_rating_to_github(new_rating)  # 리뷰를 GitHub에 저장
+                            save_ratings(ratings)
+                            st.success("평점과 리뷰가 저장되었습니다.")
 
     # 추천 영화
     with tab2:
