@@ -405,8 +405,8 @@ with tab1:
                 })
                 save_ratings_to_github(ratings)
                 st.success("평점 데이터가 GitHub에 성공적으로 저장되었습니다.")
-        else:
-            st.warning("관리자만 접근 가능합니다.")
+            else:
+                st.warning("관리자만 접근 가능합니다.")
         
             # 회원 정보
             st.subheader("📋 회원 정보")
