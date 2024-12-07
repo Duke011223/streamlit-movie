@@ -104,39 +104,45 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def main():
+    # 전역 변수 설정
+    global ratings_sha
     
+    # 앱 제목
     st.title("🎬 영화 추천 및 검색 시스템")
     
-     # GitHub에서 사용자 정보 및 평점 정보 로드
+    # GitHub에서 사용자 정보 및 평점 정보 로드
     user_df, user_sha = fetch_user_csv_from_github()
     if user_df.empty:
         user_df = pd.DataFrame(columns=["username", "password", "role"])
     
-    ratings_df, ratings_sha = fetch_rating_csv_from_github()  # 평점 데이터 로드
+    # GitHub에서 평점 정보 로드
+    ratings_df, ratings_sha = fetch_rating_csv_from_github()
     if ratings_df.empty:
         ratings_df = pd.DataFrame(columns=["username", "movie", "rating", "review"])
+        ratings = []  # 평점 정보 초기화
     else:
-        ratings = ratings_df.to_dict('records')
+        ratings = ratings_df.to_dict('records')  # 데이터 변환
     
-    # 새로고침 버튼을 눌렀을 때 데이터 새로 고침
+    # 새로고침 버튼: 캐시 무효화 및 데이터 새로 고침
     if st.button("새로고침"):
-        # 캐시된 데이터를 무효화하고 새 데이터를 로드
         st.cache_data.clear()  # 캐시를 삭제
         df = load_data()  # 최신 데이터 로드
         st.success("데이터가 새로 고침되었습니다.")
     else:
         df = load_data()  # 캐시된 데이터 사용
 
+    # 사용자 및 평점 로컬 데이터 로드
     users = load_users()
-    ratings = load_ratings()
-
+    
+    # 세션 상태 초기화
     if 'user' not in st.session_state:
         st.session_state.user = None
         st.session_state.role = None
 
-    poster_folder = 'poster_url'  # 포스터가 저장된 폴더 경로
+    # 포스터 경로 설정
+    poster_folder = 'poster_url'
 
-    # 사이드바 사용자 인증
+    # 사이드바: 사용자 인증 처리
     with st.sidebar:
         st.header("👤 사용자 인증")
         if st.session_state.user:
@@ -169,104 +175,124 @@ def main():
                             "username": new_username,
                             "password": hash_password(new_password),
                             "role": "user",
-                         }
-                        users.append({'username': new_username, 'password': hash_password(new_password), 'role': 'user'})
+                        }
+                        users.append(new_user)
                         user_df = pd.concat([user_df, pd.DataFrame([new_user])], ignore_index=True)
                         update_user_csv_to_github(user_df, user_sha)
                         save_users(users)
                         st.success("회원가입 성공! 이제 로그인할 수 있습니다.")
-
         st.markdown("---")
 
     # 영화 검색 및 기타 기능은 그대로 두기
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 영화 검색", "⭐ 추천 영화", "📈 나의 활동", "🔧 사용자 계정 관리", "👑 관리자 보기"])
 
-    # 영화 검색
-    with tab1:
-        st.header("🎥 영화 검색")
-        search_term = st.text_input("🔍 검색", placeholder="영화 제목을 입력하세요...")
-        genre_filter = st.selectbox("🎭 장르 필터", options=["모든 장르"] + df['genre'].unique().tolist())
+# 영화 검색
+with tab1:
+    st.header("🎥 영화 검색")
+    search_term = st.text_input("🔍 검색", placeholder="영화 제목을 입력하세요...")
+    genre_filter = st.selectbox("🎭 장르 필터", options=["모든 장르"] + df['genre'].unique().tolist())
 
-        # 필터링 및 페이지네이션
-        filtered_df = df[df['title'].str.contains(search_term, case=False)]
-        if genre_filter != "모든 장르":
-            filtered_df = filtered_df[filtered_df['genre'] == genre_filter]
+    # 필터링 및 페이지네이션
+    filtered_df = df[df['title'].str.contains(search_term, case=False)]
+    if genre_filter != "모든 장르":
+        filtered_df = filtered_df[filtered_df['genre'] == genre_filter]
 
-        total_movies = len(filtered_df)
-        if total_movies == 0:
-            st.warning("검색 결과가 없습니다.")
-        else:
-            page_size = 5
-            total_pages = (total_movies // page_size) + (1 if total_movies % page_size != 0 else 0)
-            page = st.number_input("페이지 번호", min_value=1, max_value=total_pages, value=1)
+    total_movies = len(filtered_df)
+    if total_movies == 0:
+        st.warning("검색 결과가 없습니다.")
+    else:
+        page_size = 5
+        total_pages = (total_movies // page_size) + (1 if total_movies % page_size != 0 else 0)
+        page = st.number_input("페이지 번호", min_value=1, max_value=total_pages, value=1)
 
-            start_idx = (page - 1) * page_size
-            end_idx = min(page * page_size, total_movies)
+        start_idx = (page - 1) * page_size
+        end_idx = min(page * page_size, total_movies)
 
-            for _, movie in filtered_df.iloc[start_idx:end_idx].iterrows():
-                st.subheader(movie['title'])
+        for _, movie in filtered_df.iloc[start_idx:end_idx].iterrows():
+            st.subheader(movie['title'])
 
-                # 영화 데이터에서 포스터 파일 경로 추출
-                poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
-                if os.path.exists(poster_path) and pd.notna(movie.get('poster_url')):
-                    st.image(poster_path, width=200)  # 이미지 표시
-                else:
-                    st.write("포스터 이미지가 없습니다.")  # 이미지가 없을 경우 메시지 출력
+            # 영화 데이터에서 포스터 파일 경로 추출
+            poster_path = os.path.join(poster_folder, movie.get('poster_url', ''))
+            if os.path.exists(poster_path) and pd.notna(movie.get('poster_url')):
+                st.image(poster_path, width=200)  # 이미지 표시
+            else:
+                st.write("포스터 이미지가 없습니다.")  # 이미지가 없을 경우 메시지 출력
 
-                # 영화 정보 출력
-                st.write(f"**영화 ID**: {movie['movie_id']}")
-                st.write(f"**제작사**: {movie['distributor']}")
-                st.write(f"**감독**: {movie['director']}")
-                st.write(f"**배우**: {movie['actor']}")
-                st.write(f"**장르**: {movie['genre']}")
-                st.write(f"**개봉일**: {movie['release_date']}")
+            # 영화 정보 출력
+            st.write(f"**영화 ID**: {movie['movie_id']}")
+            st.write(f"**제작사**: {movie['distributor']}")
+            st.write(f"**감독**: {movie['director']}")
+            st.write(f"**배우**: {movie['actor']}")
+            st.write(f"**장르**: {movie['genre']}")
+            st.write(f"**개봉일**: {movie['release_date']}")
 
-                running_time = movie.get('running_time', '정보 없음')
-                if running_time != '정보 없음':
-                    try:
-                        running_time = int(running_time)
-                        st.write(f"**상영 시간**: {running_time}분")
-                    except ValueError:
-                        st.write("**상영 시간**: 정보 없음")
-                else:
+            running_time = movie.get('running_time', '정보 없음')
+            if running_time != '정보 없음':
+                try:
+                    running_time = int(running_time)
                     st.write(f"**상영 시간**: {running_time}분")
+                except ValueError:
+                    st.write("**상영 시간**: 정보 없음")
+            else:
+                st.write(f"**상영 시간**: {running_time}분")
 
-                st.write(f"**영화 평점**: {movie['rating']}")
-                st.write(f"**현재 상태**: {movie['running_state']}")
-                st.markdown("---")
+            st.write(f"**영화 평점**: {movie['rating']}")
+            st.write(f"**현재 상태**: {movie['running_state']}")
+            st.markdown("---")
 
-                # 영화에 대한 평점 표시
-                movie_ratings = [r['rating'] for r in ratings if r['movie'] == movie['title']]
-                if movie_ratings:
-                    avg_rating = round(sum(movie_ratings) / len(movie_ratings), 2)
-                    st.write(f"사이트 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
+            # 영화에 대한 평점 표시
+            movie_ratings = [r['rating'] for r in ratings if r['movie'] == movie['title']]
+            if movie_ratings:
+                avg_rating = round(sum(movie_ratings) / len(movie_ratings), 2)
+                st.write(f"사이트 평점: {'⭐' * int(avg_rating)} ({avg_rating}/10)")
+            else:
+                st.write("아직 평점이 없습니다.")
+
+            movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['title'] and r.get('review') is not None]
+            if movie_reviews:
+                st.write("리뷰:")
+                for review in movie_reviews:
+                    st.write(f"- {review}")
+            else:
+                st.write("아직 리뷰가 없습니다.")
+
+            if st.session_state.user:
+                if any(r['username'] == st.session_state.user and r['movie'] == movie['title'] for r in ratings):
+                    st.info("이미 이 영화에 평점과 리뷰를 남겼습니다.")
                 else:
-                    st.write("아직 평점이 없습니다.")
+                    # 개별 평점 입력
+                    rating = st.number_input(
+                        f"평점을 선택하세요 ({movie['title']})", 
+                        min_value=0.0, max_value=10.0, step=0.1, format="%.2f"
+                    )
+                    # 리뷰 입력
+                    review = st.text_area(
+                        f"리뷰를 작성하세요 ({movie['title']})", 
+                        placeholder="영화를 보고 느낀 점을 적어보세요..."
+                    )
 
-                movie_reviews = [r['review'] for r in ratings if r['movie'] == movie['title'] and r.get('review') is not None]
-                if movie_reviews:
-                    st.write("리뷰:")
-                    for review in movie_reviews:
-                        st.write(f"- {review}")
-                else:
-                    st.write("아직 리뷰가 없습니다.")
+                    # 평점 및 리뷰 저장 버튼
+                    if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
+                        ratings.append({
+                            'username': st.session_state.user, 
+                            'movie': movie['title'], 
+                            'rating': round(rating, 2),
+                            'review': review if review else None
+                        })
+                        save_ratings_to_github(ratings)  # GitHub에 업데이트
+                        st.success("평점과 리뷰가 저장되었습니다.")
 
-                if st.session_state.user:
-                    if any(r['username'] == st.session_state.user and r['movie'] == movie['title'] for r in ratings):
-                        st.info("이미 이 영화에 평점과 리뷰를 남겼습니다.")
-                    else:
-                        rating = st.number_input(f"평점을 선택하세요 ({movie['title']})", min_value=0.0, max_value=10.0, step=0.1, format="%.2f")
-                        review = st.text_area(f"리뷰를 작성하세요 ({movie['title']})", placeholder="영화를 보고 느낀 점을 적어보세요...")
+            # 평점 업데이트 테스트 버튼 추가
+            if st.session_state.user and st.button(f"'{movie['title']}' 평점 업데이트 테스트", key=f"test-{movie['title']}"):
+                ratings.append({
+                    'username': "test_user",
+                    'movie': movie['title'],
+                    'rating': 9.0,
+                    'review': "테스트 리뷰"
+                })
+                save_ratings_to_github(ratings)
+                st.success(f"테스트 평점이 '{movie['title']}'에 추가되었습니다.")
 
-                        if st.button(f"'{movie['title']}' 평점 및 리뷰 남기기", key=f"rate-review-{movie['title']}"):
-                            ratings.append({
-                                'username': st.session_state.user, 
-                                'movie': movie['title'], 
-                                'rating': round(rating, 2),
-                                'review': review if review else None
-                            })
-                            save_ratings_to_github(ratings)  # GitHub에 업데이트
-                            st.success("평점과 리뷰가 저장되었습니다.")
 
     # 추천 영화
     with tab2:
@@ -370,6 +396,18 @@ def main():
     with tab5:
         st.header("👑 관리자 보기")
         if st.session_state.role == 'admin':
+            if st.button("평점 업데이트 테스트"):
+                ratings.append({
+                    'username': "test_user",
+                    'movie': "Test Movie",
+                    'rating': 8.5,
+                    'review': "테스트 리뷰"
+                })
+                save_ratings_to_github(ratings)
+                st.success("평점 데이터가 GitHub에 성공적으로 저장되었습니다.")
+        else:
+            st.warning("관리자만 접근 가능합니다.")
+        
             # 회원 정보
             st.subheader("📋 회원 정보")
             user_info = pd.DataFrame(users)
