@@ -48,7 +48,7 @@ def load_data():
         df.columns = df.columns.str.strip().str.lower()
         return df
     except Exception as e:
-        st.error(f"데이터 로드 오류: {e}")amlit-movie/blob/main/movie_users.csv"
+        st.error(f"데이터 로드 오류: {e}")
         return pd.DataFrame()
 
 def save_users(users):
