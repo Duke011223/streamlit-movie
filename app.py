@@ -427,7 +427,7 @@ def main():
                             f"새 평점 ({r['영화 제목']})", 
                             min_value=0.0, 
                             max_value=10.0, 
-                            step=0.1, 
+                            step=0.01, 
                             value=float(admin_ratings[idx]['rating'])
                         )
                         new_review = st.text_area(
@@ -435,17 +435,33 @@ def main():
                             value=admin_ratings[idx]['review'] if admin_ratings[idx].get('review') else ""
                         )
 
-                        # 수정 저장 버튼
+                         # 수정 저장 버튼
                         if st.button(f"리뷰 수정 저장 ({r['영화 제목']})", key=f"save-edit-{idx}"):
+                            # 데이터 수정
                             admin_ratings[idx]['rating'] = new_rating
                             admin_ratings[idx]['review'] = new_review if new_review else None
+            
+                            # 로컬 파일에 저장
                             save_ratings(admin_ratings)
+            
+                            # GitHub에 저장
+                            ratings_df = pd.DataFrame(admin_ratings)
+                            update_rating_csv_to_github(ratings_df, ratings_sha)
+            
                             st.success("리뷰가 성공적으로 수정되었습니다.")
 
                         # 삭제 버튼
                         if st.button(f"리뷰 삭제 ({r['영화 제목']})", key=f"delete-review-{idx}"):
-                            admin_ratings.pop(idx)  # 리뷰 제거
+                            # 데이터 삭제
+                            admin_ratings.pop(idx)
+            
+                            # 로컬 파일에 저장
                             save_ratings(admin_ratings)
+            
+                            # GitHub에 저장
+                            ratings_df = pd.DataFrame(admin_ratings)
+                            update_rating_csv_to_github(ratings_df, ratings_sha)
+            
                             st.warning(f"{r['사용자명']}의 리뷰가 삭제되었습니다.")
             else:
                 st.write("현재 등록된 리뷰가 없습니다.")
