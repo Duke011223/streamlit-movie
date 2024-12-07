@@ -385,19 +385,7 @@ def main():
     with tab5:
         st.header("👑 관리자 보기")
         if st.session_state.role == 'admin':
-            if st.button("평점 업데이트 테스트"):
-                ratings.append({
-                    'username': "test_user",
-                    'movie': "Test Movie",
-                    'rating': 8.5,
-                    'review': "테스트 리뷰"
-                })
-                ratings_df = pd.DataFrame(ratings)  # ratings 리스트를 DataFrame으로 변환
-                update_rating_csv_to_github(ratings_df, ratings_sha)  # GitHub에 저장
-                st.success("평점 데이터가 GitHub에 성공적으로 저장되었습니다.")
-            else:
-                st.warning("관리자만 접근 가능합니다.")
-        
+            
             # 회원 정보
             st.subheader("📋 회원 정보")
             user_info = pd.DataFrame(users)
